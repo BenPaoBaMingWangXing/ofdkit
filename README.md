@@ -249,7 +249,7 @@ moon test
 
 ## 文档
 
-- [项目申报书](docs/PROPOSAL.md)：背景、Scope（做什么 / 不做什么）、里程碑、可机器验证的验收判据
+- [项目申报书](docs/PROPOSAL.md)：基本信息、核心功能范围、本期不包含的功能、验收判据、与参考实现的一致性验证
 - [开发历程](docs/DEVLOG.md)：选题查重、三个真实 bug 的来龙去脉、AI 工具怎么用、对 ofdrw 与 FreeType 的借鉴
 - [CHANGELOG](CHANGELOG.md)：每个版本改了什么
 
