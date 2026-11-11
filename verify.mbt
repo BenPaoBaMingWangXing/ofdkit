@@ -279,6 +279,72 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
           }
         }
       }
+      // Document-level resources: images.
+      match tag_inner(document_xml, "ofd:DocumentRes") {
+        None => report.add("no image resources", true, "")
+        Some(res_name) => {
+          let res_path = join_path(parent_dir(doc_root), res_name)
+          match archive.read(res_path) {
+            Err(message) => report.add("DocumentRes resolves", false, message)
+            Ok(bytes) => {
+              report.add("DocumentRes resolves", true, res_path)
+              let doc_res_xml = @utf8.decode_lossy(bytes)
+              let image_files = find_all_tag_inner(doc_res_xml, "ofd:ImageFile")
+              let mut missing = ""
+              let mut all_images = true
+              let mut bad_format = ""
+              let mut count = 0
+              for file in image_files {
+                count = count + 1
+                let candidate = join_path(parent_dir(res_path), "Res/\{file}")
+                if !archive.contains(candidate) {
+                  all_images = false
+                  if missing == "" {
+                    missing = candidate
+                  }
+                } else {
+                  match archive.read(candidate) {
+                    Err(message) => {
+                      all_images = false
+                      bad_format = message
+                    }
+                    Ok(data) =>
+                      match detect_image_format(data) {
+                        Err(message) => {
+                          all_images = false
+                          bad_format = "\{file}: \{message}"
+                        }
+                        Ok(_) => ()
+                      }
+                  }
+                }
+              }
+              report.add(
+                "declared images are packaged",
+                all_images,
+                if count == 0 {
+                  "no images"
+                } else if missing == "" {
+                  "\{count} image(s)"
+                } else {
+                  missing
+                },
+              )
+              report.add(
+                "images are PNG or JPEG",
+                bad_format == "",
+                if count == 0 {
+                  "no images"
+                } else if bad_format == "" {
+                  "\{count} image(s)"
+                } else {
+                  bad_format
+                },
+              )
+            }
+          }
+        }
+      }
       report
     }
   }

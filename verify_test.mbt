@@ -90,6 +90,7 @@ test "max unit id covers page object ids" {
     let id = match obj {
       @ofdkit.Text(t) => t.id
       @ofdkit.Path(p) => p.id
+      @ofdkit.Image(i) => i.id
     }
     assert_true(max >= id)
   }

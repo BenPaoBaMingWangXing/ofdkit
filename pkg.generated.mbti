@@ -6,6 +6,8 @@ pub fn code_points_of(String) -> Array[Int32]
 
 pub fn crc32(Bytes) -> UInt32
 
+pub fn detect_image_format(Bytes) -> Result[ImageFormat, String]
+
 pub fn estimate_text_width(String, Double) -> Double
 
 pub fn fmt_hex(UInt32) -> String
@@ -15,6 +17,10 @@ pub fn fmt_mm(Double) -> String
 pub fn font_file_path(Int32) -> String
 
 pub fn font_glyph_count(Bytes) -> Result[Int32, String]
+
+pub fn image_file_name(Int32, ImageFormat) -> String
+
+pub fn image_file_path(Int32, ImageFormat) -> String
 
 pub fn page_content_path(Int32) -> String
 
@@ -27,6 +33,8 @@ pub fn parse_zip(Bytes) -> Result[ZipArchive, String]
 pub fn serialize_content(Page) -> String
 
 pub fn serialize_document(Document) -> String
+
+pub fn serialize_document_res(Document) -> String
 
 pub fn serialize_ofd_xml(Document) -> String
 
@@ -90,9 +98,11 @@ pub struct Document {
   fonts : Array[Font]
   mut next_id : Int32
   mut primary_font : Int32
+  images : Array[ImageResource]
 }
 pub fn Document::add_embedded_font(Self, String, Bytes) -> Int32
 pub fn Document::add_font(Self, String) -> Int32
+pub fn Document::add_image(Self, Bytes) -> Result[Int32, String]
 pub fn Document::add_page(Self) -> Page
 pub fn Document::add_page_sized(Self, Double, Double) -> Page
 pub fn Document::alloc_id(Self) -> Int32
@@ -114,6 +124,7 @@ pub fn Document::to_bytes(Self) -> Bytes
 pub enum DrawObject {
   Text(TextObject)
   Path(PathObject)
+  Image(ImageObject)
 }
 
 pub struct Font {
@@ -124,6 +135,23 @@ pub struct Font {
 }
 pub fn Font::embedded(Int32, String, Bytes) -> Self
 pub fn Font::named(Int32, String) -> Self
+
+pub enum ImageFormat {
+  Png
+  Jpeg
+}
+
+pub struct ImageObject {
+  id : Int32
+  boundary : Rect
+  resource_id : Int32
+}
+
+pub struct ImageResource {
+  id : Int32
+  format : ImageFormat
+  data : Bytes
+}
 
 pub struct Page {
   id : Int32
@@ -136,6 +164,7 @@ pub struct Page {
 }
 pub fn Page::fill_rect(Self, Double, Double, Double, Double, Color) -> Unit
 pub fn Page::fill_rect_object(Self, Double, Double, Double, Double, Color) -> PathObject
+pub fn Page::image(Self, Double, Double, Double, Double, Int32) -> Unit
 pub fn Page::line(Self, Double, Double, Double, Double, Double) -> Unit
 pub fn Page::line_object(Self, Double, Double, Double, Double, Double) -> PathObject
 pub fn Page::measure_text(Self, String, Double) -> Double

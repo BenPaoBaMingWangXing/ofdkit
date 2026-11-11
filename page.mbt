@@ -335,6 +335,26 @@ pub fn Page::path_object(
 }
 
 ///|
+/// Paint a registered image into `(x, y, width, height)` millimetres. The image
+/// is stretched to fill the box; OFD has no aspect-preserving mode at this
+/// level, so compute the box yourself when the ratio matters.
+pub fn Page::image(
+  self : Page,
+  x : Double,
+  y : Double,
+  width : Double,
+  height : Double,
+  resource_id : Int32,
+) -> Unit {
+  let obj = {
+    id: self.alloc_id(),
+    boundary: { x, y, width, height, },
+    resource_id,
+  }
+  self.objects.push(Image(obj))
+}
+
+///|
 pub fn Page::object_count(self : Page) -> Int32 {
   self.objects.length()
 }

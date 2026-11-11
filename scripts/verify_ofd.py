@@ -107,6 +107,18 @@ def main() -> None:
         table_count = struct.unpack(">H", data[4:6])[0]
         print(f"  font ok  {name}  {table_count} tables, {len(data)} bytes")
 
+    # Images must be PNG or JPEG; OFD readers pick a decoder by subtype.
+    for name in names:
+        lowered = name.lower()
+        if not lowered.endswith((".png", ".jpg", ".jpeg")):
+            continue
+        data = archive.read(name)
+        is_png = data[:4] == b"\x89PNG"
+        is_jpeg = data[:3] == b"\xff\xd8\xff"
+        if not (is_png or is_jpeg):
+            fail(f"{name} is neither PNG nor JPEG")
+        print(f"  image ok  {name}  {len(data)} bytes")
+
     # MaxUnitID must be at least as large as every object ID in the package.
     max_unit = document.find(".//ofd:MaxUnitID", NS)
     if max_unit is None or not max_unit.text:

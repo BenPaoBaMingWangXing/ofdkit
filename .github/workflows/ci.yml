@@ -49,3 +49,17 @@ jobs:
           else
             echo "no system TrueType font found, skipping font embedding check"
           fi
+
+      - name: Image embedding path
+        run: |
+          python3 - <<'PY'
+          import base64
+          # 1x1 transparent PNG
+          data = base64.b64decode(
+              "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+          )
+          open("out/seal.png", "wb").write(data)
+          PY
+          moon run cmd/main -- demo out/demo-image.ofd out/seal.png
+          moon run cmd/main -- verify out/demo-image.ofd
+          python3 scripts/verify_ofd.py out/demo-image.ofd
