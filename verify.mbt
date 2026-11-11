@@ -75,6 +75,32 @@ fn tag_inner(xml : String, tag : String) -> String? {
 }
 
 ///|
+/// Collect the text of every `<tag>...</tag>` occurrence in document order.
+fn find_all_tag_inner(xml : String, tag : String) -> Array[String] {
+  let values : Array[String] = []
+  let open = "<\{tag}>"
+  let close = "</\{tag}>"
+  let mut rest = xml
+  let mut keep_going = true
+  while keep_going {
+    match rest.find(open) {
+      None => keep_going = false
+      Some(start_pos) => {
+        let after_open = rest[start_pos + open.length():]
+        match after_open.find(close) {
+          None => keep_going = false
+          Some(end_pos) => {
+            values.push(after_open[:end_pos].to_owned())
+            rest = after_open[end_pos + close.length():].to_owned()
+          }
+        }
+      }
+    }
+  }
+  values
+}
+
+///|
 /// Collect every value of `attr="..."` in document order.
 fn find_all_attr(xml : String, attr : String) -> Array[String] {
   let values : Array[String] = []
@@ -197,7 +223,7 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
             Ok(bytes) => {
               report.add("PublicRes resolves", true, res_path)
               let res_xml = @utf8.decode_lossy(bytes)
-              let font_files = find_all_attr(res_xml, "FontFile")
+              let font_files = find_all_tag_inner(res_xml, "ofd:FontFile")
               // FontFile values are relative to the directory named by BaseLoc
               // on the ofd:Res element, which is "Res" for packages we write.
               let mut missing = ""
@@ -216,10 +242,39 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
                 all_fonts,
                 if font_files.length() == 0 {
                   "no embedded fonts"
+                } else if missing == "" {
+                  "\{font_files.length()} font file(s)"
                 } else {
                   missing
                 },
               )
+              // A packaged font must actually be a font. This catches the case
+              // where the file exists but the subsetter emitted garbage.
+              let mut fonts_ok = true
+              let mut font_detail = if font_files.length() == 0 {
+                "no embedded fonts"
+              } else {
+                ""
+              }
+              for file in font_files {
+                let candidate = join_path(parent_dir(res_path), "Res/\{file}")
+                match archive.read(candidate) {
+                  Err(message) => {
+                    fonts_ok = false
+                    font_detail = message
+                  }
+                  Ok(bytes) =>
+                    match parse_ttf(bytes) {
+                      Err(message) => {
+                        fonts_ok = false
+                        font_detail = "\{file}: \{message}"
+                      }
+                      Ok(face) =>
+                        font_detail = "\{file}: \{face.num_glyphs()} glyphs"
+                    }
+                }
+              }
+              report.add("embedded fonts are readable", fonts_ok, font_detail)
             }
           }
         }

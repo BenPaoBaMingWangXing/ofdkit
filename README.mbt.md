@@ -5,7 +5,7 @@
 OFD（Open Fixed-layout Document，开放式版式文档）是国家标准 **GB/T 33190-2016** 定义的版式文档格式，在电子发票、电子档案、电子证照等场景中作为 PDF 的国产替代格式使用。ofdkit 让 MoonBit 程序可以直接生成 `.ofd` 文件，并用独立的解析路径校验自己产出的包结构。
 
 ```
-JSON / 业务数据  →  ofdkit  →  xxx.ofd  →  OFD 阅读器
+业务数据  →  ofdkit  →  xxx.ofd  →  OFD 阅读器
 ```
 
 ## 现在能做什么
@@ -14,20 +14,20 @@ JSON / 业务数据  →  ofdkit  →  xxx.ofd  →  OFD 阅读器
 - 多页文档，A4 或自定义页面尺寸
 - 文本对象：中文与 ASCII 混排、字号、颜色
 - 图形对象：直线、矩形、填充矩形、自定义路径（`M` / `L` / `C` / `Q` / `B` 指令）
-- 字体资源声明（`PublicRes.xml`）
+- **TrueType 字体嵌入与子集化**：给一个字库文件和使用到的文本，ofdkit 只保留需要的中文字形，把 9.7 MB 的黑体压到 130 KB 级别
 - 文档元数据：标题、作者、主题、关键词、创建日期
-- 结构自校验：`ofdkit verify` 会重新解析生成的包，逐项检查必需文件与引用是否自洽
+- 结构自校验：`ofdkit verify` 会重新解析生成的包，逐项检查必需文件、引用、对象 ID 上限，以及嵌入字体是不是真的字体
 
 ## 现在不能做什么
 
 这些是已知缺口，不是"暂未测试"——代码里确实没有：
 
 - **不读取、不渲染 OFD**。这是生成侧工具，没有版面解析和栅格化能力。
-- **不嵌入字体文件**。`PublicRes.xml` 里目前只声明字体名（默认 `SimSun`），由阅读器按名替换。嵌入 TrueType 子集是下一阶段的工作。
 - **不支持签章**。GB/T 38540 的电子签章（`Signatures.xml` / `Seal.esl` / `SignedValue.dat`）尚未实现。
 - **不支持图片对象**（`ImageObject`）。
 - **不支持自动换行、对齐、字间距**。文本按单行绘制，调用方给位置和宽度估算。
 - **ZIP 只写 store 模式**（不压缩）。包体积因此偏大，但结构完全合法且可复现。
+- **字体子集不做字形重编号**。保留原 glyph id、把未用字形清空，所以 `hmtx` 和 `loca` 仍按原字形总数分配（这是子集仍有 100 KB 量级的原因）。真正的重编号能把体积再压一个数量级，但会牵动 `cmap`、复合字形组件索引和 `hmtx` 三处，风险与收益暂不划算。
 
 ## 安装
 
@@ -56,19 +56,33 @@ fn build_report() -> Bytes {
 
 坐标单位统一为**毫米**，原点在页面左上角，Y 轴向下——与标准一致，调用方不需要做任何单位换算。
 
+### 嵌入中文字体
+
+```mbt nocheck
+let font_bytes = @fs.read_file_to_bytes("C:/Windows/Fonts/simhei.ttf")
+// 子集只覆盖这段文本里出现的字符。
+ignore(doc.embed_font_for_text("SimHei", font_bytes, "月度报表 本期收入 12.4%"))
+let page = doc.add_page()   // 新页面自动使用刚注册的字体
+page.text(20.0, 30.0, 10.0, "月度报表")
+```
+
+`embed_font_for_text` 会解析 TrueType、按文本取字符集、做复合字形闭包、重建 `glyf`/`loca`，然后把子集注册到 `PublicRes.xml` 的 `FontFile` 下。之后 `add_page` 创建的页面默认就用这个字体。
+
 ## 命令行
 
 ```
-moon run cmd/main -- demo   out/demo.ofd
-moon run cmd/main -- verify out/demo.ofd
-moon run cmd/main -- info   out/demo.ofd
+moon run cmd/main -- demo      out/demo.ofd
+moon run cmd/main -- demo      out/demo-font.ofd C:/Windows/Fonts/simhei.ttf
+moon run cmd/main -- verify    out/demo.ofd
+moon run cmd/main -- info      out/demo.ofd
+moon run cmd/main -- font-info C:/Windows/Fonts/simhei.ttf
 ```
 
-`verify` 的实际输出：
+`verify` 的实际输出（带嵌入字体时）：
 
 ```
-校验 out/demo.ofd
-  通过  zip container parses  (9 entries)
+校验 out/demo-font.ofd
+  通过  zip container parses  (11 entries)
   通过  OFD.xml present  (at archive root)
   通过  OFD.xml declares ofd:OFD
   通过  DocRoot declared  (Doc_0/Document.xml)
@@ -78,9 +92,10 @@ moon run cmd/main -- info   out/demo.ofd
   通过  document has pages  (2 page(s))
   通过  every page content stream exists
   通过  PublicRes resolves  (Doc_0/PublicRes.xml)
-  通过  declared font files are packaged  (no embedded fonts)
+  通过  declared font files are packaged  (1 font file(s))
+  通过  embedded fonts are readable  (Font_1.ttf: 28562 glyphs)
 
-11/11 checks passed
+12/12 checks passed
 ```
 
 ## 包结构
@@ -90,17 +105,30 @@ OFD.xml                         入口，指向 DocRoot
 Doc_0/Document.xml              文档骨架、页面列表、共享资源引用
 Doc_0/PublicRes.xml             字体等共享资源
 Doc_0/Pages/Page_0/Content.xml  第 1 页内容流
-Doc_0/Pages/Page_1/Content.xml  第 2 页内容流
+Doc_0/Res/Font_1.ttf            子集化后的嵌入字体
 ```
 
 内容流里的对象形如：
 
 ```xml
-<ofd:TextObject ID="1000" Boundary="20 30 60 6" Font="2" Size="5" Fill="true">
+<ofd:TextObject ID="1000" Boundary="20 30 60 6" Font="1" Size="5" Fill="true">
   <ofd:FillColor Value="0 0 0"/>
   <ofd:TextCode X="0" Y="5">月度报表</ofd:TextCode>
 </ofd:TextObject>
 ```
+
+## 字体子集化做了什么
+
+一个中文字库动辄 10 MB、两万多个字形，直接塞进文档不现实。ofdkit 的取舍是：
+
+1. **保留 glyph id，清空未用字形**。`cmap`、`hmtx` 和复合字形的组件索引全部保持有效，不需要重编号——这是大多数子集器出错的地方。
+2. **复合字形闭包**。汉字里"汉""湖"这类由部件拼出来的字形引用了其他字形，必须递归收进来，否则渲染时部件会丢失。
+3. **`loca` 用短格式**。它的大小由字形总数决定而不是实际保留数，短格式能砍掉一半。
+4. **丢弃 hinting 与 OpenType 排版表**（`cvt`/`fpgm`/`prep`/`GSUB`/`GPOS`）。印刷用途用不上，留着只是体积。
+
+实测：`simhei.ttf` 9,753,388 字节、28,562 个字形，为示例文档子集化后 134,708 字节、11 个表。
+
+验证方式是把子集从包里取出来，交给 FreeType（经 Pillow）真实渲染，逐字检查无缺字——不是"文件能打开"就算过。
 
 ## 与成熟实现的结构对齐
 
@@ -113,18 +141,24 @@ Doc_0/Pages/Page_1/Content.xml  第 2 页内容流
 
 ## 怎么证明它是对的
 
-三层，都不依赖 ofdkit 自己：
+四层，都不依赖 ofdkit 自己：
 
 1. **外部 ZIP 解析**：生成的文件用 Python 标准库 `zipfile` 打开，`testzip()` 通过，逐个条目 CRC 校验。
 2. **外部 XML 解析**：四个 XML 用 `xml.etree.ElementTree` 解析，命名空间为 `http://www.ofdspec.org/2016`，可正确读出页面数、对象数、中文文本。
-3. **自带结构校验**：`ofdkit verify` 走的是独立的 ZIP 读取路径（`parse_zip` → 中央目录 → 本地头 → 数据），不复用写入侧代码。
+3. **自带结构校验**：`ofdkit verify` 走独立的 ZIP 读取路径（`parse_zip` → 中央目录 → 本地头 → 数据），不复用写入侧代码。
+4. **字体真实渲染**：子集字体交给 FreeType 渲染，检查笔画完整。
 
-第三层在开发中真实抓到过一个 bug：`MaxUnitID` 原本直接取文档计数器，而页面对象 ID 是分段分配的，导致声明的最大 ID 小于实际对象 ID——违反标准，现已修正并由 `max unit id covers page object ids` 测试守住。
+这套组合在开发中真实抓到过三个 bug：
+
+- `MaxUnitID` 取的是文档计数器，而页面对象 ID 是分段分配的，声明值小于实际对象 ID；
+- `FontFile` 是元素文本，校验器却按属性去匹配，导致"缺字体文件"一直是盲的；
+- 子集字体最初写成小端（那是 ZIP 的约定，TrueType 是大端），FreeType 直接拒绝加载。
 
 ## 设计取舍
 
 - **不引入 XML 库**：OFD 的 XML 结构浅且固定，手写发射器比通用 DOM 更可控，也便于保证转义不漏。
 - **不引入 ZIP 库**：容器逻辑只有几百行，自己写换来零依赖和字节级可复现（时间戳固定为 ZIP 纪元）。
+- **不引入字体库**：只需要读表、取字形、重建两个表，自己写比绑定 FreeType 更轻，也不必处理跨平台二进制依赖。
 - **写入与校验代码分离**：校验器读自己的输出，但走完全不同的代码路径，避免"用同一个 bug 验证自己"。
 - **对象 ID 分段**：每页从 `page_id * 1000` 起分配，避免页间冲突，也便于人工排查。
 
@@ -134,11 +168,11 @@ Doc_0/Pages/Page_1/Content.xml  第 2 页内容流
 moon test
 ```
 
-24 个测试，覆盖 CRC-32 标准向量、ZIP 结构、XML 转义、序列化输出、包校验、负例（截断归档、缺页面流）。
+32 个测试，覆盖 CRC-32 标准向量、ZIP 结构、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径，以及若干负例（截断归档、缺页面流、字体文件不是字体）。
 
 ## 路线图
 
-- [ ] TrueType 子集化与字体嵌入（`FontFile` + CID 字体）
+- [ ] 字形重编号式完整子集（体积再降一个数量级）
 - [ ] 图片对象（PNG / JPEG）
 - [ ] 自动换行与简单排版
 - [ ] 文档大纲（`Outlines`）

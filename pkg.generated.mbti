@@ -2,6 +2,8 @@
 package "BenPaoBaMingWangXing/ofdkit"
 
 // Values
+pub fn code_points_of(String) -> Array[Int32]
+
 pub fn crc32(Bytes) -> UInt32
 
 pub fn estimate_text_width(String, Double) -> Double
@@ -12,7 +14,11 @@ pub fn fmt_mm(Double) -> String
 
 pub fn font_file_path(Int32) -> String
 
+pub fn font_glyph_count(Bytes) -> Result[Int32, String]
+
 pub fn page_content_path(Int32) -> String
+
+pub fn parse_ttf(Bytes) -> Result[TtfFace, String]
 
 pub fn parse_zip(Bytes) -> Result[ZipArchive, String]
 
@@ -23,6 +29,8 @@ pub fn serialize_document(Document) -> String
 pub fn serialize_ofd_xml(Document) -> String
 
 pub fn serialize_public_res(Document) -> String
+
+pub fn subset_font(TtfFace, Array[Int32]) -> Result[Bytes, String]
 
 pub fn verify_ofd(Bytes) -> VerifyReport
 
@@ -42,8 +50,15 @@ pub fn ByteBuf::with_capacity(Int32) -> Self
 pub fn ByteBuf::write_ascii(Self, String) -> Unit
 pub fn ByteBuf::write_byte(Self, Byte) -> Unit
 pub fn ByteBuf::write_bytes(Self, Bytes) -> Unit
+pub fn ByteBuf::write_u16_be(Self, UInt32) -> Unit
 pub fn ByteBuf::write_u16_le(Self, UInt32) -> Unit
+pub fn ByteBuf::write_u32_be(Self, UInt32) -> Unit
 pub fn ByteBuf::write_u32_le(Self, UInt32) -> Unit
+
+pub struct CmapSubtable {
+  offset : Int32
+  format : Int32
+}
 
 pub struct Color {
   r : Int32
@@ -72,6 +87,7 @@ pub struct Document {
   pages : Array[Page]
   fonts : Array[Font]
   mut next_id : Int32
+  mut primary_font : Int32
 }
 pub fn Document::add_embedded_font(Self, String, Bytes) -> Int32
 pub fn Document::add_font(Self, String) -> Int32
@@ -79,10 +95,12 @@ pub fn Document::add_page(Self) -> Page
 pub fn Document::add_page_sized(Self, Double, Double) -> Page
 pub fn Document::alloc_id(Self) -> Int32
 pub fn Document::directory_names(Self) -> Array[String]
+pub fn Document::embed_font_for_text(Self, String, Bytes, String) -> Result[Int32, String]
 pub fn Document::entry_names(Self) -> Array[String]
 pub fn Document::max_unit_id(Self) -> Int32
 pub fn Document::new() -> Self
 pub fn Document::page_count(Self) -> Int32
+pub fn Document::primary_font_id(Self) -> Int32
 pub fn Document::set_author(Self, String) -> Self
 pub fn Document::set_creation_date(Self, String) -> Self
 pub fn Document::set_doc_id(Self, String) -> Self
@@ -154,6 +172,27 @@ pub struct TextObject {
   text : String
   offset_x : Double
   offset_y : Double
+}
+
+pub struct TtfFace {
+  data : Bytes
+  tables : Array[TtfTable]
+}
+pub fn TtfFace::advance_width(Self, Int32) -> Int32
+pub fn TtfFace::cmap(Self) -> CmapSubtable?
+pub fn TtfFace::glyph_for_char(Self, Int32) -> Int32
+pub fn TtfFace::glyph_range(Self, Int32) -> (Int32, Int32)?
+pub fn TtfFace::index_to_loc_format(Self) -> Int32
+pub fn TtfFace::num_glyphs(Self) -> Int32
+pub fn TtfFace::number_of_hmetrics(Self) -> Int32
+pub fn TtfFace::table(Self, String) -> TtfTable?
+pub fn TtfFace::table_count(Self) -> Int32
+pub fn TtfFace::units_per_em(Self) -> Int32
+
+pub struct TtfTable {
+  tag : String
+  offset : Int32
+  length : Int32
 }
 
 pub struct VerifyCheck {

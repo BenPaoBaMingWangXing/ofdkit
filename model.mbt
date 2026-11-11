@@ -131,6 +131,8 @@ pub struct Document {
   pages : Array[Page]
   fonts : Array[Font]
   mut next_id : Int32
+  /// Font used by new pages; 0 means "fall back to a named system font".
+  mut primary_font : Int32
 }
 
 ///|
@@ -146,6 +148,7 @@ pub fn Document::new() -> Document {
     pages: [],
     fonts: [],
     next_id: 1,
+    primary_font: 0,
   }
 }
 
@@ -223,7 +226,17 @@ pub fn Document::add_embedded_font(
   }
   let id = self.alloc_id()
   self.fonts.push({ id, name, family: name, data, })
+  if self.primary_font == 0 {
+    self.primary_font = id
+  }
   id
+}
+
+///|
+/// Font id that new pages will use. Zero means the document has no embedded
+/// font, and pages fall back to a named system font.
+pub fn Document::primary_font_id(self : Document) -> Int32 {
+  self.primary_font
 }
 
 ///|
@@ -236,7 +249,11 @@ pub fn Document::add_page(self : Document) -> Page {
     height: 297.0,
     objects: [],
     next_id: id * 1000,
-    default_font: self.add_font("SimSun"),
+    default_font: if self.primary_font != 0 {
+      self.primary_font
+    } else {
+      self.add_font("SimSun")
+    },
   }
   self.pages.push(page)
   page
@@ -256,7 +273,11 @@ pub fn Document::add_page_sized(
     height,
     objects: [],
     next_id: id * 1000,
-    default_font: self.add_font("SimSun"),
+    default_font: if self.primary_font != 0 {
+      self.primary_font
+    } else {
+      self.add_font("SimSun")
+    },
   }
   self.pages.push(page)
   page

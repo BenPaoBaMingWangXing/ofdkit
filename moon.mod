@@ -2,7 +2,7 @@
 
 name = "BenPaoBaMingWangXing/ofdkit"
 
-version = "0.1.1"
+version = "0.2.0"
 
 readme = "README.mbt.md"
 
@@ -21,7 +21,7 @@ keywords = [
 
 preferred_target = "wasm"
 
-description = "Pure MoonBit writer and structural verifier for OFD fixed-layout documents (GB/T 33190-2016): multi-page packages, text and path objects, document metadata, and a self-checking CLI."
+description = "Pure MoonBit writer and structural verifier for OFD fixed-layout documents (GB/T 33190-2016): multi-page packages, text and path objects, TrueType font subsetting and embedding, and a self-checking CLI."
 
 import {
   "moonbitlang/x@0.5.5",

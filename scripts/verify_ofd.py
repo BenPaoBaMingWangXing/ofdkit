@@ -9,6 +9,7 @@ Usage:
     python3 scripts/verify_ofd.py out/demo.ofd
 """
 
+import struct
 import sys
 import zipfile
 import xml.etree.ElementTree as ET
@@ -93,6 +94,18 @@ def main() -> None:
         if not page_root.tag.endswith("}Page"):
             fail(f"{page_path} root is not ofd:Page")
         print(f"  page ok  {page_path}")
+
+    # Embedded fonts must be real TrueType files, not renamed blobs.
+    fonts = [n for n in names if n.lower().endswith(".ttf")]
+    for name in fonts:
+        data = archive.read(name)
+        if len(data) < 12:
+            fail(f"{name} is too short to be a font")
+        version = struct.unpack(">I", data[:4])[0]
+        if version not in (0x00010000, 0x74727565):
+            fail(f"{name} is not a TrueType font (sfnt version 0x{version:08X})")
+        table_count = struct.unpack(">H", data[4:6])[0]
+        print(f"  font ok  {name}  {table_count} tables, {len(data)} bytes")
 
     # MaxUnitID must be at least as large as every object ID in the package.
     max_unit = document.find(".//ofd:MaxUnitID", NS)
