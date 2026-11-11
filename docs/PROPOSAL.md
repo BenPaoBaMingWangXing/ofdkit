@@ -6,7 +6,7 @@
 
 - **项目名称**：ofdkit：纯 MoonBit 的 OFD 版式文档生成器与结构校验器
 - **参赛者**：BenPaoBaMingWangXing
-- **联系方式**：360018614@qq.com
+- **联系方式**：2381847248@qq.com
 - **GitHub 仓库链接**：<https://github.com/BenPaoBaMingWangXing/ofdkit>
 - **项目方向**：MoonBit 版式文档基础库 / 国产基础软件基础设施
 - **是否为移植项目**：否。按 GB/T 33190-2016 标准原创实现，未移植其他语言的代码
