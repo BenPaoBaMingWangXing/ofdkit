@@ -94,3 +94,27 @@ test "max unit id covers page object ids" {
     assert_true(max >= id)
   }
 }
+
+///|
+test "verify rejects a package whose font file is not a font" {
+  // Hand-build a package that declares a font and ships garbage bytes for it.
+  let zw = @ofdkit.ZipWriter::new()
+  let ofd_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ofd:OFD xmlns:ofd=\"http://www.ofdspec.org/2016\" DocType=\"OFD\" Version=\"1.1\"><ofd:DocBody><ofd:DocRoot>Doc_0/Document.xml</ofd:DocRoot></ofd:DocBody></ofd:OFD>"
+  let doc_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ofd:Document xmlns:ofd=\"http://www.ofdspec.org/2016\"><ofd:CommonData><ofd:PageArea><ofd:PhysicalBox>0 0 210 297</ofd:PhysicalBox></ofd:PageArea><ofd:PublicRes>PublicRes.xml</ofd:PublicRes><ofd:MaxUnitID>4</ofd:MaxUnitID></ofd:CommonData><ofd:Pages><ofd:Page ID=\"1\" BaseLoc=\"Pages/Page_0/Content.xml\"/></ofd:Pages></ofd:Document>"
+  let res_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ofd:Res xmlns:ofd=\"http://www.ofdspec.org/2016\" BaseLoc=\"Res\"><ofd:Fonts><ofd:Font ID=\"2\" FontName=\"SimHei\" FamilyName=\"SimHei\" Charset=\"unicode\"><ofd:FontFile>Font_2.ttf</ofd:FontFile></ofd:Font></ofd:Fonts></ofd:Res>"
+  let page_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ofd:Page xmlns:ofd=\"http://www.ofdspec.org/2016\"><ofd:Content><ofd:Layer ID=\"3\"/></ofd:Content></ofd:Page>"
+  zw.add_file("OFD.xml", @utf8.encode(ofd_xml))
+  zw.add_file("Doc_0/Document.xml", @utf8.encode(doc_xml))
+  zw.add_file("Doc_0/PublicRes.xml", @utf8.encode(res_xml))
+  zw.add_file("Doc_0/Pages/Page_0/Content.xml", @utf8.encode(page_xml))
+  zw.add_file("Doc_0/Res/Font_2.ttf", b"this is not a font file")
+  let report = @ofdkit.verify_ofd(zw.finish())
+  assert_false(report.passed())
+  let mut found = false
+  for failure in report.failures() {
+    if failure.name == "embedded fonts are readable" {
+      found = true
+    }
+  }
+  assert_true(found)
+}

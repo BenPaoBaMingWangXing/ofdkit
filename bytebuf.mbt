@@ -68,6 +68,21 @@ pub fn ByteBuf::write_u32_le(self : ByteBuf, value : UInt32) -> Unit {
 }
 
 ///|
+/// Big-endian writers. TrueType, unlike ZIP, is big-endian throughout.
+pub fn ByteBuf::write_u16_be(self : ByteBuf, value : UInt32) -> Unit {
+  self.write_byte(((value >> 8) & 0xFFU).to_byte())
+  self.write_byte((value & 0xFFU).to_byte())
+}
+
+///|
+pub fn ByteBuf::write_u32_be(self : ByteBuf, value : UInt32) -> Unit {
+  self.write_byte(((value >> 24) & 0xFFU).to_byte())
+  self.write_byte(((value >> 16) & 0xFFU).to_byte())
+  self.write_byte(((value >> 8) & 0xFFU).to_byte())
+  self.write_byte((value & 0xFFU).to_byte())
+}
+
+///|
 pub fn ByteBuf::write_bytes(self : ByteBuf, value : Bytes) -> Unit {
   let n = value.length()
   self.grow(n)

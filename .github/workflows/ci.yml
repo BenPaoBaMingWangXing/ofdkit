@@ -38,3 +38,14 @@ jobs:
 
       - name: Independent structural check
         run: python3 scripts/verify_ofd.py out/demo.ofd
+
+      - name: Font embedding path
+        run: |
+          FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+          if [ -f "$FONT" ]; then
+            moon run cmd/main -- demo out/demo-font.ofd "$FONT"
+            moon run cmd/main -- verify out/demo-font.ofd
+            python3 scripts/verify_ofd.py out/demo-font.ofd
+          else
+            echo "no system TrueType font found, skipping font embedding check"
+          fi
