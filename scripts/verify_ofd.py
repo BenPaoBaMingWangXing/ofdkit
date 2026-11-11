@@ -73,7 +73,14 @@ def main() -> None:
     if not pages:
         fail("document declares no pages")
 
-    # Each page's BaseLoc must resolve, and every page must declare a page box.
+    # The page box is declared once in Document.xml.
+    page_box = document.find(".//ofd:PageArea/ofd:PhysicalBox", NS)
+    if page_box is None or not page_box.text:
+        fail("Document.xml has no PageArea/PhysicalBox")
+    box_width, box_height = page_box.text.split()[2:4]
+    print(f"  page box  {box_width} x {box_height} mm")
+
+    # Each page's BaseLoc must resolve, and the content stream must be a page.
     base_dir = doc_path.rsplit("/", 1)[0] if "/" in doc_path else ""
     for page in pages:
         base_loc = page.get("BaseLoc")
@@ -83,11 +90,9 @@ def main() -> None:
         if page_path not in names:
             fail(f"page BaseLoc does not resolve: {page_path}")
         page_root = roots[page_path]
-        box = page_root.find(".//ofd:PhysicalBox", NS)
-        if box is None or not box.text:
-            fail(f"{page_path} has no PhysicalBox")
-        width, height = box.text.split()[2:4]
-        print(f"  page ok  {page_path}  {width} x {height} mm")
+        if not page_root.tag.endswith("}Page"):
+            fail(f"{page_path} root is not ofd:Page")
+        print(f"  page ok  {page_path}")
 
     # MaxUnitID must be at least as large as every object ID in the package.
     max_unit = document.find(".//ofd:MaxUnitID", NS)

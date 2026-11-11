@@ -12,6 +12,7 @@ struct ZipEntry {
   crc : UInt32
   size : UInt32
   offset : UInt32
+  is_dir : Bool
 }
 
 ///|
@@ -64,7 +65,32 @@ pub fn ZipWriter::add_file(
   self.out.write_u16_le(0U) // extra field length
   self.out.write_bytes(name_bytes)
   self.out.write_bytes(data)
-  self.entries.push({ name, crc, size, offset, })
+  self.entries.push({ name, crc, size, offset, is_dir: false, })
+}
+
+///|
+/// Append a directory entry. OFD packages carry explicit directory records
+/// (`Doc_0/`, `Doc_0/Pages/`, ...); some readers rely on them being present.
+pub fn ZipWriter::add_directory(self : ZipWriter, name : String) -> Unit {
+  if self.finished {
+    abort("ZipWriter: cannot add a directory after finish()")
+  }
+  let dir_name = if name.has_suffix("/") { name } else { name + "/" }
+  let name_bytes = @utf8.encode(dir_name)
+  let offset = self.out.length().reinterpret_as_uint()
+  self.out.write_u32_le(0x04034B50U)
+  self.out.write_u16_le(20U)
+  self.out.write_u16_le(0U)
+  self.out.write_u16_le(0U)
+  self.out.write_u16_le(DOS_TIME)
+  self.out.write_u16_le(DOS_DATE)
+  self.out.write_u32_le(0U)
+  self.out.write_u32_le(0U)
+  self.out.write_u32_le(0U)
+  self.out.write_u16_le(name_bytes.length().reinterpret_as_uint())
+  self.out.write_u16_le(0U)
+  self.out.write_bytes(name_bytes)
+  self.entries.push({ name: dir_name, crc: 0U, size: 0U, offset, is_dir: true, })
 }
 
 ///|
@@ -104,7 +130,8 @@ pub fn ZipWriter::finish(self : ZipWriter) -> Bytes {
     self.out.write_u16_le(0U) // comment
     self.out.write_u16_le(0U) // disk number start
     self.out.write_u16_le(0U) // internal attributes
-    self.out.write_u32_le(0U) // external attributes
+    // MS-DOS directory attribute (0x10) for directory records.
+    self.out.write_u32_le(if entry.is_dir { 0x10U } else { 0U })
     self.out.write_u32_le(entry.offset)
     self.out.write_bytes(name_bytes)
   }

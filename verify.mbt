@@ -155,6 +155,16 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
         document_xml.contains("<ofd:Document"),
         "",
       )
+      // The page box lives once in Document.xml / CommonData / PageArea.
+      let page_box = tag_inner(document_xml, "ofd:PhysicalBox")
+      report.add(
+        "document declares a page box",
+        page_box is Some(_),
+        match page_box {
+          Some(value) => value
+          None => "missing ofd:PhysicalBox"
+        },
+      )
       // Pages.
       let base_locs = find_all_attr(document_xml, "BaseLoc")
       if base_locs.length() == 0 {

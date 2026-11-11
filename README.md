@@ -67,18 +67,19 @@ moon run cmd/main -- info   out/demo.ofd
 
 ```
 校验 out/demo.ofd
-  通过  zip container parses  (5 entries)
+  通过  zip container parses  (9 entries)
   通过  OFD.xml present  (at archive root)
   通过  OFD.xml declares ofd:OFD
   通过  DocRoot declared  (Doc_0/Document.xml)
   通过  DocRoot resolves  (Doc_0/Document.xml)
   通过  Document.xml declares ofd:Document
+  通过  document declares a page box  (0 0 210 297)
   通过  document has pages  (2 page(s))
   通过  every page content stream exists
   通过  PublicRes resolves  (Doc_0/PublicRes.xml)
   通过  declared font files are packaged  (no embedded fonts)
 
-10/10 checks passed
+11/11 checks passed
 ```
 
 ## 包结构
@@ -99,6 +100,15 @@ Doc_0/Pages/Page_1/Content.xml  第 2 页内容流
   <ofd:TextCode X="0" Y="5">月度报表</ofd:TextCode>
 </ofd:TextObject>
 ```
+
+## 与成熟实现的结构对齐
+
+[ofdrw](https://github.com/ofdrw/ofdrw)（OFD Reader & Writer，MIT，是目前使用最广的 OFD 实现）的测试样例 `helloworld.ofd` 被拿来逐项比对包结构。据此修正了两处偏差：
+
+1. **ZIP 必须包含目录条目**（`Doc_0/`、`Doc_0/Pages/`、`Doc_0/Pages/Page_N/`），只写叶子文件是不够的——不少阅读器依赖目录记录遍历包；
+2. **`CommonData` 的子元素顺序**为 `PageArea` → `PublicRes` → `MaxUnitID`；页面尺寸在 `Document.xml` 里声明一次，`Content.xml` 不再重复一层 `Area`。
+
+这两处都是"按标准字面写合法"但"与事实实现不一致"的差异，自己的校验器发现不了——只有拿别人的产物对比才会暴露。
 
 ## 怎么证明它是对的
 
