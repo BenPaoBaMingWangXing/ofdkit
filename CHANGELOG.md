@@ -3,6 +3,10 @@
 All notable changes to ofdkit are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.8.2
+
+- Documentation only: contact address in the proposal.
+
 ## 0.8.1
 
 - Documentation only: correct the per-module line counts in the proposal so the
