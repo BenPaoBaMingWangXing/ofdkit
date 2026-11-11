@@ -3,6 +3,39 @@
 All notable changes to ofdkit are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.8.0
+
+Closes every limitation the 0.7.0 proposal listed.
+
+- **ZIP compression.** A dependency-free DEFLATE encoder (RFC 1951): one fixed
+  Huffman block, hash-chain match search with one step of lazy matching. Entries
+  are compressed only when that shrinks them, so already-compressed images stay
+  `stored`. The demo package drops from 51,467 to 32,512 bytes of payload
+  (63.2%), against zlib `-9`'s 58.6%.
+- **DEFLATE decoder** for the verifier's independent read path, so
+  `ofdkit verify` still parses its own compressed output.
+- **Two real encoder bugs found by cross-checking against CPython's zlib**, both
+  invisible to a self-consistency round trip: the distance code table skipped the
+  two zero-extra-bit codes (3 and 4), and the 5-bit distance code was packed
+  least-significant bit first when every Huffman code goes out most-significant
+  bit first. `zipfile.testzip()` is now part of the verification story.
+- **Justification and letter spacing.** `Align::Justify`,
+  `Page::text_justified`, `Page::paragraph_aligned` and `Page::text_spaced`.
+  Slack is spread between characters for Chinese text and never opens a gap
+  inside a Latin word; the final line of a paragraph stays left-aligned.
+  Runs with explicit per-glyph positions serialise as one `TextCode` per
+  character, which ofdrw reads correctly.
+- **Table styling.** `with_zebra`, `with_border_color`, `with_header_fill`,
+  `with_padding`; rules are now drawn in the style's colour instead of black.
+- **Hinting is kept.** `cvt `, `fpgm` and `prep` are copied into the subset with
+  corrected checksums. FreeType renders the subset pixel-identically to the
+  original font (IoU 1.0000 at 160/80/40/20 px), for about 1 KB.
+- **`cmap` format 12** is written alongside format 4, so characters outside the
+  BMP survive subsetting.
+- **Verified against a real reader.** `scripts/java/ReadOfd.java` reads the
+  generated package with ofdrw 2.5.1: 2 pages, 19 text objects (90 `TextCode`s),
+  17 paths, 1 image, A4 size and Chinese text intact.
+
 ## 0.7.0
 
 - **Renumbering font subset.** Kept glyphs are packed into ids `0..n-1`, and

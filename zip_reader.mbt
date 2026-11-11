@@ -2,8 +2,9 @@
 /// Minimal ZIP reader for verification.
 ///
 /// This is deliberately small: it parses the central directory and reads stored
-/// entries, which is exactly the subset `ofdkit` writes. It exists so the
-/// project can validate its own output without shelling out to another tool.
+/// or fixed-Huffman-deflated entries, which is exactly the subset `ofdkit`
+/// writes. It exists so the project can validate its own output without
+/// shelling out to another tool.
 
 ///|
 pub struct ZipEntryInfo {
@@ -140,7 +141,7 @@ pub fn ZipArchive::entry(self : ZipArchive, name : String) -> ZipEntryInfo? {
 }
 
 ///|
-/// Read an entry's bytes. Only stored entries are supported.
+/// Read an entry's bytes, transparently inflating DEFLATE entries.
 pub fn ZipArchive::read(
   self : ZipArchive,
   name : String,
@@ -148,9 +149,9 @@ pub fn ZipArchive::read(
   match self.entry(name) {
     None => Err("missing entry: \{name}")
     Some(entry) => {
-      if entry.compression != 0U {
+      if entry.compression != 0U && entry.compression != 8U {
         return Err(
-          "entry \{name} is compressed; only stored entries are readable",
+          "entry \{name} uses compression method \{entry.compression}; only stored and deflate are readable",
         )
       }
       let header_at = entry.local_offset
@@ -163,11 +164,24 @@ pub fn ZipArchive::read(
       let name_len = read_u16(self.data, header_at + 26).reinterpret_as_int()
       let extra_len = read_u16(self.data, header_at + 28).reinterpret_as_int()
       let start = header_at + 30 + name_len + extra_len
-      let size = entry.uncompressed_size
-      if start + size > self.data.length() {
+      let stored = entry.compressed_size
+      if start + stored > self.data.length() {
         return Err("corrupt zip: payload out of range for \{name}")
       }
-      let payload = slice_bytes(self.data, start, size)
+      let raw = slice_bytes(self.data, start, stored)
+      let payload = if entry.compression == 0U {
+        raw
+      } else {
+        match inflate_raw(raw) {
+          Ok(bytes) => bytes
+          Err(message) => return Err("cannot inflate \{name}: \{message}")
+        }
+      }
+      if payload.length() != entry.uncompressed_size {
+        return Err(
+          "size mismatch for \{name}: header says \{entry.uncompressed_size}, got \{payload.length()}",
+        )
+      }
       if crc32(payload) != entry.crc {
         return Err("crc mismatch for \{name}")
       }

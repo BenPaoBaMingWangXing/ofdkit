@@ -39,6 +39,24 @@ jobs:
       - name: Independent structural check
         run: python3 scripts/verify_ofd.py out/demo.ofd
 
+      - name: Compressed entries decode with zlib
+        run: |
+          python3 - <<'PY'
+          # testzip() inflates every entry with CPython's zlib and checks the
+          # CRC, so this is a real interoperability check for our encoder.
+          import zipfile
+          z = zipfile.ZipFile("out/demo.ofd")
+          assert z.testzip() is None, "a deflate entry did not decode"
+          deflated = [i for i in z.infolist() if i.compress_type == 8]
+          assert deflated, "nothing was compressed; the deflate path is dead code"
+          print(f"{len(deflated)} deflate entries decoded by CPython zlib")
+          PY
+
+      - name: Preview renderer
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 scripts/preview_ofd.py out/demo.ofd preview.png 0
+
       - name: Font embedding path
         run: |
           FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf

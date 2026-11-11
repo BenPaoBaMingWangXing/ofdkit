@@ -18,23 +18,28 @@ OFD（Open Fixed-layout Document，开放式版式文档）是国家标准 **GB/
 - 多页文档，A4 或自定义页面尺寸
 - 文本对象：中文与 ASCII 混排、字号、颜色
 - 图形对象：直线、矩形、填充矩形、自定义路径（`M` / `L` / `C` / `Q` / `B` 指令）
-- **TrueType 字体嵌入与子集化**：给一个字库文件和使用到的文本，ofdkit 只保留需要的中文字形并重编号，把 9.7 MB 的黑体压到 18 KB 级别
+- **TrueType 字体嵌入与子集化**：给一个字库文件和使用到的文本，ofdkit 只保留需要的中文字形并重编号，把 9.7 MB 的黑体压到 21 KB（110 个字形），hinting 表完整保留
 - **基于真实字形的文本度量与自动换行**：有嵌入字体时按字体的 advance width 排版，宽度与 FreeType 逐位一致
 - **图片对象**：PNG / JPEG 原样打包进 `DocumentRes.xml`，按毫米框定位（印章、logo 这类）
-- **表格与对齐**：`page.table()` 画网格、填表头底色、按列宽截断单元格文本；`page.text_aligned()` 支持左/中/右对齐
+- **ZIP 压缩**：自研 DEFLATE 编码器（固定 Huffman + 哈希链 + 惰性匹配），可压缩条目**按压缩存储**、不可压缩的自动退回 store；示例包 51 KB → 34 KB
+- **表格**：`page.table()` 画网格，表头底色、**斑马纹**、**边框颜色**、内边距均可配置，单元格超宽按字符截断补省略号
+- **段落排版**：`page.paragraph_aligned()` 支持左/中/右/**两端对齐**；两端对齐按中文规范分配字间距，且不会把 `Content.xml` 这类拉丁词拉开
+- **字间距**：`page.text_spaced()` 逐字定位，`page.text_justified()` 按框宽撑满
 - **文档大纲**：`doc.add_outline()` 写入阅读器的书签树，支持层级
 - 文档元数据：标题、作者、主题、关键词、创建日期
-- 结构自校验：`ofdkit verify` 会重新解析生成的包，逐项检查必需文件、引用、对象 ID 上限，以及嵌入字体是不是真的字体
+- 结构自校验：`ofdkit verify` 会重新解析生成的包，16 项检查覆盖必需文件、引用、对象 ID 上限、字体可解析性、图片格式、大纲目标
+- **跨平台码点**：`cmap` 同时写 format 4（BMP）与 format 12（增补平面），生僻字与 emoji 也能进子集
 
 ## 现在不能做什么
 
 这些是已知缺口，不是"暂未测试"——代码里确实没有：
 
 - **不读取、不渲染 OFD**。这是生成侧工具，没有版面解析和栅格化能力。
-- **不支持签章**。GB/T 38540 的电子签章（`Signatures.xml` / `Seal.esl` / `SignedValue.dat`）尚未实现。
-- **不支持两端对齐、字间距、英文断词回退**。换行按字符宽度累加，英文单词只在整词超宽时才被拆开，不会回溯到上一个空格断行。
-- **ZIP 只写 store 模式**（不压缩）。包体积因此偏大，但结构完全合法且可复现。
-- **丢掉了 hinting**（`cvt`/`fpgm`/`prep`）与 OpenType 排版表。字形轮廓一致，但小字号下的抗锯齿细节与原始字体会有一两像素差异。
+- **不支持签章**。GB/T 38540 的电子签章（`Signatures.xml` / `Seal.esl` / `SignedValue.dat`）尚未实现；它需要 SM2、ASN.1 DER 与国密证书链，工作量约等于现有全部功能之和，且没有证书就无法验证。
+- **不支持 OpenType 高级排版**。`GSUB`/`GPOS` 不读也不用，竖排、连字、字距调整表都不生效；子集字体里只带 `glyf`/`loca`/`hmtx`/`cmap` 与 hinting。
+- **不支持渐变、透明度、裁剪路径**。图形只有纯色描边与填充，`CGTransform` 与 `Clip` 未实现。
+- **压缩用固定 Huffman 单块**：比 zlib `-9` 大约差 6%~14%（示例包 32.5 KB vs 30.2 KB）。动态 Huffman 需要码长树构建与传输，收益不足以抵消复杂度。
+- **位图只认 PNG / JPEG**。JBIG2、CCITT G4、JPEG 2000 这类 OFD 允许的格式没有写入口。
 
 ## 安装
 
@@ -87,8 +92,8 @@ moon run cmd/main -- font-info C:/Windows/Fonts/simhei.ttf
 `verify` 的实际输出（带嵌入字体时）：
 
 ```
-校验 out/demo-font.ofd
-  通过  zip container parses  (11 entries)
+校验 out/demo.ofd
+  通过  zip container parses  (13 entries)
   通过  OFD.xml present  (at archive root)
   通过  OFD.xml declares ofd:OFD
   通过  DocRoot declared  (Doc_0/Document.xml)
@@ -97,14 +102,15 @@ moon run cmd/main -- font-info C:/Windows/Fonts/simhei.ttf
   通过  document declares a page box  (0 0 210 297)
   通过  document has pages  (2 page(s))
   通过  every page content stream exists
+  通过  outline destinations resolve  (2 entr(ies))
   通过  PublicRes resolves  (Doc_0/PublicRes.xml)
   通过  declared font files are packaged  (1 font file(s))
-  通过  embedded fonts are readable  (Font_1.ttf: 28562 glyphs)
+  通过  embedded fonts are readable  (Font_1.ttf: 110 glyphs)
   通过  DocumentRes resolves  (Doc_0/DocumentRes.xml)
   通过  declared images are packaged  (1 image(s))
   通过  images are PNG or JPEG  (1 image(s))
 
-15/15 checks passed
+16/16 checks passed
 ```
 
 ## 包结构
@@ -126,6 +132,28 @@ Doc_0/Res/Font_1.ttf            子集化后的嵌入字体
 </ofd:TextObject>
 ```
 
+## ZIP 压缩
+
+包里 97% 的字节是 XML 和字体子集，两者都高度可压缩，所以写入侧带了一个自研的 DEFLATE 编码器（RFC 1951）：
+
+- **单块固定 Huffman**。不构建码长树，省掉码表传输，代价是压缩率比动态 Huffman 差一点。
+- **哈希链 + 惰性匹配**。每个三字节前缀挂在一条链上，最多回看 48 个候选；若下一位置能匹配得更长，当前字节就退化成字面量。这一步让 XML 的压缩率从 zlib 的 72% 拉到 96%。
+- **不划算就退回 store**。小于 64 字节、或者压缩后反而更长（比如已经压过的 PNG）的条目原样存储。示例包里的 `Image_2.png` 就是这么处理的。
+
+实测（示例包，含字体与图片）：
+
+| 条目 | 原始 | 压缩后 | zlib `-9` |
+|---|---|---|---|
+| `Page_0/Content.xml` | 7,999 | 1,260 | 1,178 |
+| `Page_1/Content.xml` | 5,387 | 1,177 | 1,074 |
+| `Font_1.ttf` | 21,536 | 14,583 | 12,706 |
+| `Image_2.png` | 14,351 | 14,351（store） | 14,142 |
+| 整包 | 51,467 | **32,512** | 30,159 |
+
+XML 只差 6%，字体差 14%：字形轮廓的字节分布很平，固定 Huffman 无法按频率自适应。整体差 6%，换来零依赖。
+
+解码侧同样是自己写的（只覆盖 store 与固定 Huffman），用在 `verify` 的独立读取路径上——写入与校验共用同一张距离码表，任何一侧写错都会在测试里炸掉。
+
 ## 字体子集化做了什么
 
 一个中文字库动辄 10 MB、两万多个字形，直接塞进文档不现实。ofdkit 的取舍是：
@@ -136,9 +164,9 @@ Doc_0/Res/Font_1.ttf            子集化后的嵌入字体
 4. **`loca` 用短格式**（offset/2），能省一半。
 5. **`post` 重写成 version 3**（无字形名），32 字节。
 
-实测：`simhei.ttf` 9,753,388 字节 / 28,562 字形 → **18,664 字节 / 102 个字形**，示例文档里 96 个不同字符全部覆盖。
+实测：`simhei.ttf` 9,753,388 字节 / 28,562 字形 → **21,536 字节 / 110 个字形**，示例文档里 104 个不同字符全部覆盖。多出的 1 KB 是 hinting 三张表（`cvt `/`fpgm`/`prep`）——留着它，小字号才不会被渲染器“自作主张”地重新对齐。
 
-验证分两层：把子集从包里取出来交给 FreeType 真实渲染，先看"有没有缺字"，再用二值化墨迹的 IoU 与原字体对齐——字号 160 时 IoU 0.977，字号 40 时 0.869。差异集中在笔画边缘，来源是 hinting 被丢弃，字形轮廓本身一致。
+验证分两层：把子集从包里取出来交给 FreeType 真实渲染，先看"有没有缺字"，再用二值化墨迹的 IoU 与原字体对齐——保留 hinting 之后，字号 160 / 40 / 20 的 IoU 都是 **1.0000**，逐像素一致。
 
 ## 表格与对齐
 
@@ -155,6 +183,16 @@ let bottom = page.table(style, [
 
 默认 6.5 mm 行高、4.2 pt 字号、0.2 mm 细线、表头浅灰底。单元格文字在列宽内放不下时按字符截断并补省略号——报表里一个盖住邻格的单元格，比一个老实承认被截断的更糟。
 
+样式都是链式改的，不需要构造第二个结构体：
+
+```mbt
+let style = @ofdkit.TableStyle::new(20.0, 118.0, [40.0, 130.0])
+  .with_zebra(@ofdkit.Color::new(246, 248, 252))      // 隔行浅底
+  .with_border_color(@ofdkit.Color::new(150, 160, 180)) // 灰线而不是印刷黑
+  .with_row_height(7.0)
+  .with_padding(2.0)
+```
+
 表格超过一页时用 `table_across_pages`，它会自动加页并在每页重复表头：
 
 ```mbt
@@ -167,6 +205,21 @@ A4、20 mm 页边距、6.5 mm 行高时，每页容纳 38 行正文加表头。
 
 ```mbt
 page.text_aligned(20.0, 52.0, 170.0, 12.0, @ofdkit.Center, "标题")
+```
+
+两端对齐按中文排版习惯处理：把富余量均摊到**字与字之间**，而不是像西文那样全部塞进空格；同时不会在两个 ASCII 字符之间开口，所以 `Content.xml` 不会被拆开。最后一行保持左对齐，这是段落排版的通行做法。
+
+```mbt
+// 段落两端对齐：除最后一行外每行都撑满 170 mm
+page.paragraph_aligned(20.0, 52.0, 170.0, 5.0, 8.0, @ofdkit.Justify, text)
+// 单行两端对齐
+page.text_justified(20.0, 90.0, 170.0, 5.0, "这一行会被撑满")
+```
+
+字间距走 `text_spaced`，负值收字。它把每个字符写成独立的 `TextCode` 并给出各自的 X 坐标，任何阅读器都按坐标摆放，不依赖 `DeltaX` 的解析差异：
+
+```mbt
+page.text_spaced(20.0, 30.0, 8.0, 1.0, "字 间 距")   // 每字后加 1 mm
 ```
 
 ## 文档大纲
@@ -213,12 +266,15 @@ let next_y = page.paragraph(20.0, 30.0, 170.0, 5.0, 8.0, "很长的一段中文�
 
 ## 怎么证明它是对的
 
-四层，都不依赖 ofdkit 自己：
+五层，都不依赖 ofdkit 自己：
 
-1. **外部 ZIP 解析**：生成的文件用 Python 标准库 `zipfile` 打开，`testzip()` 通过，逐个条目 CRC 校验。
+1. **外部 ZIP 解析**：生成的文件用 Python 标准库 `zipfile` 打开，`testzip()` 通过（含 deflate 条目解码），逐个条目 CRC 校验。
 2. **外部 XML 解析**：四个 XML 用 `xml.etree.ElementTree` 解析，命名空间为 `http://www.ofdspec.org/2016`，可正确读出页面数、对象数、中文文本。
 3. **自带结构校验**：`ofdkit verify` 走独立的 ZIP 读取路径（`parse_zip` → 中央目录 → 本地头 → 数据），不复用写入侧代码。
-4. **字体真实渲染**：子集字体交给 FreeType 渲染，检查笔画完整。
+4. **字体真实渲染**：子集字体交给 FreeType 渲染，检查笔画完整，并与原字体做墨迹 IoU 比对。
+5. **第三方阅读器读取**：把包交给 [ofdrw](https://github.com/ofdrw/ofdrw)（Java，MIT，目前使用最广的 OFD 实现）解析，核对页面数、对象数、页面尺寸与中文内容。示例包读到 2 页、19 个文本对象（展开为 90 个 `TextCode`，说明逐字定位的写法它认得）、17 个图形对象、1 个图片对象。脚本在 `scripts/java/ReadOfd.java`，方法见 `scripts/reader_check.md`。
+
+第 5 层是唯一能证明"别人真的能读"的证据：前四层都由我这一侧的假设驱动，ofdrw 不是。
 
 这套组合在开发中真实抓到过三个 bug：
 
@@ -231,6 +287,7 @@ let next_y = page.paragraph(20.0, 30.0, 170.0, 5.0, 8.0, "很长的一段中文�
 - **不引入 XML 库**：OFD 的 XML 结构浅且固定，手写发射器比通用 DOM 更可控，也便于保证转义不漏。
 - **不引入 ZIP 库**：容器逻辑只有几百行，自己写换来零依赖和字节级可复现（时间戳固定为 ZIP 纪元）。
 - **不引入字体库**：只需要读表、取字形、重建两个表，自己写比绑定 FreeType 更轻，也不必处理跨平台二进制依赖。
+- **不引入压缩库**：DEFLATE 只写一种块类型（固定 Huffman），编码器 160 行、解码器 150 行。压缩率比 zlib 差一截，但换来零依赖与"能读懂自己写出的每一个 bit"——自校验的 inflate 与写入侧共用同一张距离码表，任何一方写错都会在测试里立刻暴露。
 - **写入与校验代码分离**：校验器读自己的输出，但走完全不同的代码路径，避免"用同一个 bug 验证自己"。
 - **对象 ID 分段**：每页从 `page_id * 1000` 起分配，避免页间冲突，也便于人工排查。
 
@@ -240,12 +297,12 @@ let next_y = page.paragraph(20.0, 30.0, 170.0, 5.0, 8.0, "很长的一段中文�
 moon test
 ```
 
-67 个测试，覆盖 CRC-32 标准向量、ZIP 结构、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径、文本度量与换行、表格几何、对齐偏移、图片格式嗅探、大纲目标解析、跨页分页，以及若干负例（截断归档、缺页面流、字体文件不是字体、图片魔数不对）。
+91 个测试，覆盖 CRC-32 标准向量、ZIP 结构、DEFLATE 往返、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径、文本度量与换行、表格几何、对齐与两端对齐、字间距、图片格式嗅探、大纲目标解析、跨页分页，以及若干负例（截断归档、缺页面流、字体文件不是字体、图片魔数不对）。
 
 ## 路线图
 
-- [ ] 两端对齐与字间距
-- [ ] GB/T 38540 电子签章
+- [ ] GB/T 38540 电子签章（需要 SM2 与国密证书）
+- [ ] 渐变与透明度填充
 
 ## 文档
 
