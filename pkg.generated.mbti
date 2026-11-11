@@ -78,6 +78,7 @@ pub fn Document::add_font(Self, String) -> Int32
 pub fn Document::add_page(Self) -> Page
 pub fn Document::add_page_sized(Self, Double, Double) -> Page
 pub fn Document::alloc_id(Self) -> Int32
+pub fn Document::directory_names(Self) -> Array[String]
 pub fn Document::entry_names(Self) -> Array[String]
 pub fn Document::max_unit_id(Self) -> Int32
 pub fn Document::new() -> Self
@@ -205,6 +206,7 @@ pub struct ZipWriter {
   entries : Array[ZipEntry]
   mut finished : Bool
 }
+pub fn ZipWriter::add_directory(Self, String) -> Unit
 pub fn ZipWriter::add_file(Self, String, Bytes) -> Unit
 pub fn ZipWriter::entry_count(Self) -> Int32
 pub fn ZipWriter::finish(Self) -> Bytes

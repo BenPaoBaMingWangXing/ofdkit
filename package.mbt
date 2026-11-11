@@ -14,8 +14,8 @@ pub fn font_file_path(font_id : Int32) -> String {
 }
 
 ///|
-/// Every entry the package will contain, in write order. Useful for callers
-/// that want to inspect a package before building it.
+/// Every file entry the package will contain, in write order. Directory
+/// records are added on top of these by `to_bytes`.
 pub fn Document::entry_names(doc : Document) -> Array[String] {
   let names : Array[String] = ["OFD.xml", "Doc_0/Document.xml"]
   if doc.fonts.length() > 0 {
@@ -33,6 +33,23 @@ pub fn Document::entry_names(doc : Document) -> Array[String] {
 }
 
 ///|
+/// Directory records the package must carry. OFD readers expect the archive to
+/// describe its own folder layout, not just the leaf files.
+pub fn Document::directory_names(doc : Document) -> Array[String] {
+  let dirs : Array[String] = ["Doc_0", "Doc_0/Pages"]
+  for i, _ in doc.pages {
+    dirs.push("Doc_0/Pages/Page_\{i}")
+  }
+  for font in doc.fonts {
+    if font.data.length() > 0 {
+      dirs.push("Doc_0/Res")
+      break
+    }
+  }
+  dirs
+}
+
+///|
 /// Build the complete OFD package.
 pub fn Document::to_bytes(doc : Document) -> Bytes {
   if doc.pages.length() == 0 {
@@ -40,15 +57,23 @@ pub fn Document::to_bytes(doc : Document) -> Bytes {
   }
   let zw = ZipWriter::new()
   zw.add_file("OFD.xml", @utf8.encode(serialize_ofd_xml(doc)))
+  zw.add_directory("Doc_0")
   zw.add_file("Doc_0/Document.xml", @utf8.encode(serialize_document(doc)))
   if doc.fonts.length() > 0 {
     zw.add_file("Doc_0/PublicRes.xml", @utf8.encode(serialize_public_res(doc)))
   }
+  zw.add_directory("Doc_0/Pages")
   for i, page in doc.pages {
+    zw.add_directory("Doc_0/Pages/Page_\{i}")
     zw.add_file(page_content_path(i), @utf8.encode(serialize_content(page)))
   }
+  let mut res_dir_written = false
   for font in doc.fonts {
     if font.data.length() > 0 {
+      if !res_dir_written {
+        zw.add_directory("Doc_0/Res")
+        res_dir_written = true
+      }
       zw.add_file(font_file_path(font.id), font.data)
     }
   }

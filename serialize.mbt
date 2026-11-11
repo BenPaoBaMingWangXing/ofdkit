@@ -73,14 +73,17 @@ pub fn serialize_document(doc : Document) -> String {
   xml.declaration()
   xml.open("ofd:Document", [("xmlns:ofd", OFD_NS)])
   xml.open("ofd:CommonData", [])
-  xml.leaf("ofd:MaxUnitID", [], doc.max_unit_id().to_string())
+  // Element order follows what established OFD writers emit: page area first,
+  // then resource references, then the id ceiling.
   xml.open("ofd:PageArea", [])
   let first = doc.pages[0]
   xml.leaf("ofd:PhysicalBox", [], box_attr(first.width, first.height))
+  xml.leaf("ofd:ApplicationBox", [], box_attr(first.width, first.height))
   xml.close("ofd:PageArea")
   if doc.fonts.length() > 0 {
     xml.leaf("ofd:PublicRes", [], "PublicRes.xml")
   }
+  xml.leaf("ofd:MaxUnitID", [], doc.max_unit_id().to_string())
   xml.close("ofd:CommonData")
   xml.open("ofd:Pages", [])
   for i, page in doc.pages {
@@ -168,9 +171,8 @@ pub fn serialize_content(page : Page) -> String {
   let xml = Xml::new()
   xml.declaration()
   xml.open("ofd:Page", [("xmlns:ofd", OFD_NS)])
-  xml.open("ofd:Area", [])
-  xml.leaf("ofd:PhysicalBox", [], box_attr(page.width, page.height))
-  xml.close("ofd:Area")
+  // No ofd:Area here: the page box is declared once in Document.xml, and
+  // omitting the optional per-page area matches what common writers produce.
   xml.open("ofd:Content", [])
   xml.open("ofd:Layer", [("ID", (page.id * 1000 + 1).to_string())])
   for obj in page.objects {
