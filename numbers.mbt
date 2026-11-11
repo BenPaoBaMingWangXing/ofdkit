@@ -26,3 +26,40 @@ pub fn fmt_hex(value : UInt32) -> String {
   }
   out.to_string()
 }
+
+///|
+/// Parse a decimal number. Returns `None` for anything the caller would regret
+/// silently treating as zero.
+pub fn parse_double(text : String) -> Double? {
+  let trimmed = text.trim()
+  if trimmed == "" {
+    return None
+  }
+  let mut value = 0.0
+  let mut scale = 1.0
+  let mut seen_dot = false
+  let mut seen_digit = false
+  for ch in trimmed {
+    if ch == '.' {
+      if seen_dot {
+        return None
+      }
+      seen_dot = true
+    } else if ch >= '0' && ch <= '9' {
+      seen_digit = true
+      let digit = (ch.to_uint().reinterpret_as_int() - 48).to_double()
+      if seen_dot {
+        scale = scale / 10.0
+        value = value + digit * scale
+      } else {
+        value = value * 10.0 + digit
+      }
+    } else {
+      return None
+    }
+  }
+  if !seen_digit {
+    return None
+  }
+  Some(value)
+}
