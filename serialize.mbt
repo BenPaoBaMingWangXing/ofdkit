@@ -156,11 +156,31 @@ fn serialize_text_object(xml : Xml, obj : TextObject) -> Unit {
     ("Fill", "true"),
   ])
   xml.empty("ofd:FillColor", [("Value", obj.color.to_value_string())])
-  xml.leaf(
-    "ofd:TextCode",
-    [("X", fmt_mm(obj.offset_x)), ("Y", fmt_mm(obj.offset_y))],
-    obj.text,
-  )
+  if obj.glyph_offsets.length() == 0 {
+    xml.leaf(
+      "ofd:TextCode",
+      [("X", fmt_mm(obj.offset_x)), ("Y", fmt_mm(obj.offset_y))],
+      obj.text,
+    )
+  } else {
+    // One TextCode per character with its own origin. Readers that support
+    // `DeltaX` could do this more compactly, but explicit origins are
+    // unambiguous for every implementation.
+    let mut index = 0
+    for ch in obj.text {
+      let offset = if index < obj.glyph_offsets.length() {
+        obj.glyph_offsets[index]
+      } else {
+        0.0
+      }
+      xml.leaf(
+        "ofd:TextCode",
+        [("X", fmt_mm(obj.offset_x + offset)), ("Y", fmt_mm(obj.offset_y))],
+        ch.to_string(),
+      )
+      index = index + 1
+    }
+  }
   xml.close("ofd:TextObject")
 }
 

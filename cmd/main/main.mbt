@@ -34,6 +34,7 @@ let demo_texts : Array[String] = [
   "文本支持中文与 ASCII 混排，图形支持直线与矩形。", "第二页",
   "多页文档中每一页拥有独立的 Content.xml。", "项目", "说明", "容器",
   "ZIP，入口 OFD.xml", "内容", "XML 内容流，单位毫米", "RGB 填充示例",
+  "大纲", "书签树，Goto 指向页面",
 ]
 
 ///|
@@ -64,11 +65,14 @@ fn build_demo(doc : @ofdkit.Document, image_id : Int32?) -> Unit {
   // A table via the layout helper: header row filled, rules on real column
   // widths, cell text truncated with an ellipsis when it does not fit.
   let style = @ofdkit.TableStyle::new(20.0, 118.0, [40.0, 130.0])
+    .with_zebra(@ofdkit.Color::new(240, 243, 249))
+    .with_border_color(@ofdkit.Color::new(150, 160, 180))
   ignore(
     page.table(style, [
       [demo_texts[7], demo_texts[8]],
       [demo_texts[9], demo_texts[10]],
       [demo_texts[11], demo_texts[12]],
+      [demo_texts[14], demo_texts[15]],
     ]),
   )
   // Colour swatches.
@@ -84,16 +88,21 @@ fn build_demo(doc : @ofdkit.Document, image_id : Int32?) -> Unit {
   // Page 2 — proves the page list and BaseLoc wiring.
   let page2 = doc.add_page()
   doc.add_outline(demo_texts[5], page2, 1)
-  page2.text_aligned(20.0, 30.0, 170.0, 8.0, @ofdkit.Center, demo_texts[5])
+  // Letter-spaced heading. Spacing changes the run width, so the centring is
+  // computed from the measured glyphs rather than from `text_aligned`.
+  let heading = demo_texts[5]
+  let spaced = page2.measure_text(heading, 8.0) + 2.0
+  page2.text_spaced(20.0 + (170.0 - spaced) / 2.0, 30.0, 8.0, 1.0, heading)
   page2.line(20.0, 42.0, 190.0, 42.0, 0.3)
   // A long paragraph, wrapped by the page itself.
   ignore(
-    page2.paragraph(
+    page2.paragraph_aligned(
       20.0,
       52.0,
       170.0,
       5.0,
       8.0,
+      @ofdkit.Justify,
       demo_texts[6] + demo_texts[3] + demo_texts[4] + demo_texts[6],
     ),
   )

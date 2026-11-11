@@ -10,6 +10,8 @@ pub fn code_points_of(String) -> Array[Int32]
 
 pub fn crc32(Bytes) -> UInt32
 
+pub fn deflate_raw(Bytes) -> Bytes
+
 pub fn detect_image_format(Bytes) -> Result[ImageFormat, String]
 
 pub fn estimate_text_width(String, Double) -> Double
@@ -25,6 +27,8 @@ pub fn font_glyph_count(Bytes) -> Result[Int32, String]
 pub fn image_file_name(Int32, ImageFormat) -> String
 
 pub fn image_file_path(Int32, ImageFormat) -> String
+
+pub fn inflate_raw(Bytes) -> Result[Bytes, String]
 
 pub fn page_content_path(Int32) -> String
 
@@ -59,12 +63,29 @@ pub(all) enum Align {
   Left
   Center
   Right
+  Justify
 }
+
+pub struct BitReader {
+  data : Bytes
+  mut pos : Int32
+  mut bit : Int32
+}
+pub fn BitReader::new(Bytes) -> Self
+
+pub struct BitWriter {
+  out : ByteBuf
+  mut bits : UInt32
+  mut count : Int32
+}
+pub fn BitWriter::flush(Self) -> Bytes
+pub fn BitWriter::new() -> Self
 
 pub struct ByteBuf {
   mut data : FixedArray[Byte]
   mut len : Int32
 }
+pub fn ByteBuf::byte_at(Self, Int32) -> Byte
 pub fn ByteBuf::length(Self) -> Int32
 pub fn ByteBuf::new() -> Self
 pub fn ByteBuf::to_bytes(Self) -> Bytes
@@ -190,10 +211,12 @@ pub fn Page::fill_rect_object(Self, Double, Double, Double, Double, Color) -> Pa
 pub fn Page::fit_text(Self, String, Double, Double) -> String
 pub fn Page::image(Self, Double, Double, Double, Double, Int32) -> Unit
 pub fn Page::line(Self, Double, Double, Double, Double, Double) -> Unit
+pub fn Page::line_colored(Self, Double, Double, Double, Double, Double, Color) -> Unit
 pub fn Page::line_object(Self, Double, Double, Double, Double, Double) -> PathObject
 pub fn Page::measure_text(Self, String, Double) -> Double
 pub fn Page::object_count(Self) -> Int32
 pub fn Page::paragraph(Self, Double, Double, Double, Double, Double, String) -> Double
+pub fn Page::paragraph_aligned(Self, Double, Double, Double, Double, Double, Align, String) -> Double
 pub fn Page::path(Self, Double, Double, Double, Double, String, Double) -> Unit
 pub fn Page::path_object(Self, Double, Double, Double, Double, String, Double) -> PathObject
 pub fn Page::rect(Self, Double, Double, Double, Double, Double) -> Unit
@@ -201,7 +224,10 @@ pub fn Page::rect_object(Self, Double, Double, Double, Double, Double) -> PathOb
 pub fn Page::table(Self, TableStyle, Array[Array[String]]) -> Double
 pub fn Page::text(Self, Double, Double, Double, String) -> Unit
 pub fn Page::text_aligned(Self, Double, Double, Double, Double, Align, String) -> Unit
+pub fn Page::text_at_offsets(Self, Double, Double, Double, String, Array[Double]) -> TextObject
+pub fn Page::text_justified(Self, Double, Double, Double, Double, String) -> Unit
 pub fn Page::text_object(Self, Double, Double, Double, String) -> TextObject
+pub fn Page::text_spaced(Self, Double, Double, Double, Double, String) -> Unit
 pub fn Page::text_with_font(Self, Double, Double, Double, Int32, String) -> TextObject
 pub fn Page::wrap_text(Self, String, Double, Double) -> Array[String]
 
@@ -234,12 +260,18 @@ pub struct TableStyle {
   padding : Double
   header : Bool
   header_fill : Color
+  border_color : Color
+  zebra_fill : Color?
   text_offset : Double
 }
 pub fn TableStyle::new(Double, Double, Array[Double]) -> Self
 pub fn TableStyle::width(Self) -> Double
+pub fn TableStyle::with_border_color(Self, Color) -> Self
 pub fn TableStyle::with_font_size(Self, Double) -> Self
+pub fn TableStyle::with_header_fill(Self, Color) -> Self
+pub fn TableStyle::with_padding(Self, Double) -> Self
 pub fn TableStyle::with_row_height(Self, Double) -> Self
+pub fn TableStyle::with_zebra(Self, Color) -> Self
 pub fn TableStyle::without_header(Self) -> Self
 
 pub struct TextObject {
@@ -251,6 +283,7 @@ pub struct TextObject {
   text : String
   offset_x : Double
   offset_y : Double
+  glyph_offsets : Array[Double]
 }
 
 pub struct TtfFace {

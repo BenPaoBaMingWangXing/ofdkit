@@ -5,11 +5,14 @@
 /// boxes and rules land on real glyph widths rather than guesses.
 
 ///|
-/// Horizontal alignment of a text run inside its box.
+/// Horizontal alignment of a text run inside its box. `Justify` spreads the
+/// slack over the gaps: at spaces when the line has any, otherwise between every
+/// pair of characters, which is what Chinese text expects.
 pub(all) enum Align {
   Left
   Center
   Right
+  Justify
 }
 
 ///|
@@ -24,13 +27,82 @@ pub fn Page::text_aligned(
   align : Align,
   text : String,
 ) -> Unit {
-  let measured = self.measure_text(text, size)
-  let offset = match align {
-    Left => 0.0
-    Center => (width - measured) / 2.0
-    Right => width - measured
+  match align {
+    Justify => self.text_justified(x, y, width, size, text)
+    _ => {
+      let measured = self.measure_text(text, size)
+      let offset = match align {
+        Left => 0.0
+        Center => (width - measured) / 2.0
+        Right => width - measured
+        Justify => 0.0
+      }
+      self.text(x + offset, y, size, text)
+    }
   }
-  self.text(x + offset, y, size, text)
+}
+
+///|
+/// Whether the gap between two adjacent characters may absorb justification
+/// slack. Spaces always may; a pair of ASCII characters inside a word may not,
+/// so justifying mixed Chinese/Latin text never pulls "Content.xml" apart.
+fn gap_is_stretchable(left : Char, right : Char) -> Bool {
+  if left == ' ' || right == ' ' {
+    true
+  } else {
+    !(left.is_ascii() && right.is_ascii())
+  }
+}
+
+///|
+/// Draw `text` stretched to exactly `width` millimetres by widening the gaps
+/// between characters: everywhere for Chinese text, at spaces for Latin text.
+/// A line that already overflows is drawn unchanged rather than squeezed, so
+/// justification never makes text unreadable.
+pub fn Page::text_justified(
+  self : Page,
+  x : Double,
+  y : Double,
+  width : Double,
+  size : Double,
+  text : String,
+) -> Unit {
+  let chars : Array[Char] = []
+  for ch in text {
+    chars.push(ch)
+  }
+  let count = chars.length()
+  if count < 2 {
+    self.text(x, y, size, text)
+    return
+  }
+  let natural = self.measure_text(text, size)
+  let slack = width - natural
+  if slack <= 0.01 {
+    self.text(x, y, size, text)
+    return
+  }
+  let mut gaps = 0
+  for i in 0..<(count - 1) {
+    if gap_is_stretchable(chars[i], chars[i + 1]) {
+      gaps = gaps + 1
+    }
+  }
+  if gaps == 0 {
+    self.text(x, y, size, text)
+    return
+  }
+  let extra = slack / gaps.to_double()
+  let offsets : Array[Double] = []
+  let mut cursor = 0.0
+  for i in 0..<count {
+    offsets.push(cursor)
+    cursor = cursor + self.char_width(chars[i], size)
+    if i < count - 1 && gap_is_stretchable(chars[i], chars[i + 1]) {
+      cursor = cursor + extra
+    }
+  }
+  ignore(self.text_at_offsets(x, y, size, text, offsets))
 }
 
 ///|
@@ -54,6 +126,10 @@ pub struct TableStyle {
   header : Bool
   /// Header fill colour (only used when `header` is true).
   header_fill : Color
+  /// Colour of the grid rules.
+  border_color : Color
+  /// Fill applied to every second body row, for readability. `None` disables it.
+  zebra_fill : Color?
   /// Vertical offset of the text baseline inside a row.
   text_offset : Double
 }
@@ -75,6 +151,8 @@ pub fn TableStyle::new(
     padding: 1.5,
     header: true,
     header_fill: Color::new(235, 238, 245),
+    border_color: Color::new(150, 155, 165),
+    zebra_fill: None,
     text_offset: 4.75,
   }
 }
@@ -98,6 +176,38 @@ pub fn TableStyle::with_font_size(
 ///|
 pub fn TableStyle::without_header(self : TableStyle) -> TableStyle {
   { ..self, header: false, }
+}
+
+///|
+pub fn TableStyle::with_header_fill(
+  self : TableStyle,
+  color : Color,
+) -> TableStyle {
+  { ..self, header_fill: color, }
+}
+
+///|
+pub fn TableStyle::with_border_color(
+  self : TableStyle,
+  color : Color,
+) -> TableStyle {
+  { ..self, border_color: color, }
+}
+
+///|
+/// Fill every second body row with `color`. Zebra striping is what makes a wide
+/// table trackable across columns, so it is a style flag rather than something
+/// callers have to draw themselves.
+pub fn TableStyle::with_zebra(self : TableStyle, color : Color) -> TableStyle {
+  { ..self, zebra_fill: Some(color), }
+}
+
+///|
+pub fn TableStyle::with_padding(
+  self : TableStyle,
+  padding : Double,
+) -> TableStyle {
+  { ..self, padding, }
 }
 
 ///|
@@ -138,24 +248,58 @@ pub fn Page::table(
       style.header_fill,
     )
   }
+  // Zebra fills under the rules as well.
+  match style.zebra_fill {
+    Some(fill) => {
+      let mut row = if style.header { 1 } else { 0 }
+      while row < rows.length() {
+        if row % 2 == 1 {
+          self.fill_rect(
+            style.x,
+            style.y + style.row_height * row.to_double(),
+            total_width,
+            style.row_height,
+            fill,
+          )
+        }
+        row = row + 1
+      }
+    }
+    None => ()
+  }
   // Horizontal rules, including the top and bottom edges.
   let mut row_index = 0
   while row_index <= rows.length() {
     let line_y = style.y + style.row_height * row_index.to_double()
-    self.line(style.x, line_y, style.x + total_width, line_y, style.line_width)
+    self.line_colored(
+      style.x,
+      line_y,
+      style.x + total_width,
+      line_y,
+      style.line_width,
+      style.border_color,
+    )
     row_index = row_index + 1
   }
   // Vertical rules.
   let mut column_x = style.x
-  self.line(style.x, style.y, style.x, style.y + total_height, style.line_width)
+  self.line_colored(
+    style.x,
+    style.y,
+    style.x,
+    style.y + total_height,
+    style.line_width,
+    style.border_color,
+  )
   for column in style.column_widths {
     column_x = column_x + column
-    self.line(
+    self.line_colored(
       column_x,
       style.y,
       column_x,
       style.y + total_height,
       style.line_width,
+      style.border_color,
     )
   }
   // Cell text.
@@ -177,6 +321,39 @@ pub fn Page::table(
     }
   }
   style.y + total_height
+}
+
+///|
+/// Like `paragraph`, but every line is aligned inside `width`. With
+/// `Align::Justify` the last line stays left-aligned, which is the convention in
+/// typeset prose.
+pub fn Page::paragraph_aligned(
+  self : Page,
+  x : Double,
+  y : Double,
+  width : Double,
+  size : Double,
+  line_height : Double,
+  align : Align,
+  text : String,
+) -> Double {
+  let lines = self.wrap_text(text, width, size)
+  let last = lines.length() - 1
+  let mut cursor = y
+  for i in 0..<lines.length() {
+    let line = lines[i]
+    match align {
+      Justify =>
+        if i == last {
+          self.text(x, cursor, size, line)
+        } else {
+          self.text_justified(x, cursor, width, size, line)
+        }
+      _ => self.text_aligned(x, cursor, width, size, align, line)
+    }
+    cursor = cursor + line_height
+  }
+  cursor
 }
 
 ///|

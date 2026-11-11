@@ -86,6 +86,10 @@ pub struct TextObject {
   /// Baseline origin, relative to the bottom-left corner of `boundary`.
   offset_x : Double
   offset_y : Double
+  /// Per-character X offsets, relative to `offset_x`. Empty means "draw the run
+  /// as one `TextCode`"; one entry per character means "place each glyph
+  /// explicitly", which is how letter spacing and justification are expressed.
+  glyph_offsets : Array[Double]
 }
 
 ///|

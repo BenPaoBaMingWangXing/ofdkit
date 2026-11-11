@@ -155,7 +155,7 @@ fn build_hmtx(face : TtfFace, ordered : Array[Int32]) -> Bytes {
 /// Rebuild `cmap` as a format 4 table containing only the mapped characters.
 /// Code points above the BMP are dropped; a CJK document rarely needs them and
 /// format 4 is what older readers are happiest with.
-fn build_cmap(pairs : Array[(Int32, Int32)]) -> (Bytes, Int32) {
+fn build_cmap4(pairs : Array[(Int32, Int32)]) -> (Bytes, Int32) {
   // Sort by code point and merge into one segment per run of consecutive codes
   // whose glyph ids also increment by one.
   let sorted = pairs.copy()
@@ -221,13 +221,49 @@ fn build_cmap(pairs : Array[(Int32, Int32)]) -> (Bytes, Int32) {
 }
 
 ///|
-/// Wrap a format 4 subtable in a `cmap` table with one Windows Unicode record.
+/// Build a format 12 subtable for code points beyond the BMP. Groups are runs
+/// of consecutive code points whose glyph ids also increment by one.
+fn build_cmap12(pairs : Array[(Int32, Int32)]) -> Bytes {
+  let sorted = pairs.copy()
+  sorted.sort_by(fn(a, b) { a.0.compare(b.0) })
+  let groups : Array[(Int32, Int32, Int32)] = []
+  for pair in sorted {
+    let (code, glyph) = pair
+    let last = groups.length() - 1
+    if last >= 0 &&
+      groups[last].1 + 1 == code &&
+      groups[last].2 + (code - groups[last].0) == glyph {
+      groups[last] = (groups[last].0, code, groups[last].2)
+    } else {
+      groups.push((code, code, glyph))
+    }
+  }
+  let length = 16 + groups.length() * 12
+  let body = ByteBuf::new()
+  body.write_u16_be(12U) // format
+  body.write_u16_be(0U) // reserved
+  body.write_u32_be(length.reinterpret_as_uint())
+  body.write_u32_be(0U) // language
+  body.write_u32_be(groups.length().reinterpret_as_uint())
+  for group in groups {
+    body.write_u32_be(group.0.reinterpret_as_uint())
+    body.write_u32_be(group.1.reinterpret_as_uint())
+    body.write_u32_be(group.2.reinterpret_as_uint())
+  }
+  body.to_bytes()
+}
+
+///|
+/// Wrap a subtable in a `cmap` table with one Windows Unicode encoding record.
+/// Format 4 uses encoding id 1 (BMP), format 12 uses 10 (full repertoire).
 fn wrap_cmap(subtable : Bytes) -> Bytes {
+  let format = be_u16(subtable, 0)
+  let encoding : UInt32 = if format == 12 { 10U } else { 1U }
   let cmap = ByteBuf::new()
   cmap.write_u16_be(0U) // version
   cmap.write_u16_be(1U) // numTables
   cmap.write_u16_be(3U) // platformID: Windows
-  cmap.write_u16_be(1U) // encodingID: Unicode BMP
+  cmap.write_u16_be(encoding)
   cmap.write_u32_be(12U) // offset to subtable
   cmap.write_bytes(subtable)
   cmap.to_bytes()
@@ -305,7 +341,21 @@ pub fn subset_font_renumbered(
     face, ordered, old_to_new,
   )
   let hmtx = build_hmtx(face, ordered)
-  let (cmap_subtable, _) = build_cmap(remapped)
+  // Format 4 is what every reader understands, but it cannot express code
+  // points above the BMP. Fall back to format 12 only when the document needs
+  // it, so ordinary Chinese text keeps the widest compatibility.
+  let mut needs_wide = false
+  for pair in remapped {
+    if pair.0 > 0xFFFF {
+      needs_wide = true
+    }
+  }
+  let cmap_subtable = if needs_wide {
+    build_cmap12(remapped)
+  } else {
+    let (subtable, _) = build_cmap4(remapped)
+    subtable
+  }
   let cmap = wrap_cmap(cmap_subtable)
 
   let out : Array[OutTable] = []
@@ -343,7 +393,10 @@ pub fn subset_font_renumbered(
   out.push({ tag: "glyf", data: glyf, checksum: table_checksum(glyf), })
   let post = empty_post_table()
   out.push({ tag: "post", data: post, checksum: table_checksum(post), })
-  for tag in ["name", "OS/2", "gasp"] {
+  // Keeping the hinting programs costs a few KB and restores the small-size
+  // rasterisation the original font had. Hinting references cvt entries and
+  // points within a glyph, never glyph ids, so renumbering does not break it.
+  for tag in ["name", "OS/2", "gasp", "cvt ", "fpgm", "prep"] {
     match copy_table(face, tag) {
       None => ()
       Some(table) => out.push(table)

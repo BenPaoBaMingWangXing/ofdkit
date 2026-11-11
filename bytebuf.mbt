@@ -98,6 +98,16 @@ pub fn ByteBuf::write_ascii(self : ByteBuf, value : String) -> Unit {
 }
 
 ///|
+/// Read a byte already written. Used by the inflater to copy LZ77 matches out
+/// of its own output.
+pub fn ByteBuf::byte_at(self : ByteBuf, index : Int32) -> Byte {
+  if index < 0 || index >= self.len {
+    abort("ByteBuf: read out of range")
+  }
+  self.data[index]
+}
+
+///|
 pub fn ByteBuf::to_bytes(self : ByteBuf) -> Bytes {
   Bytes::from_array(self.data[:self.len])
 }

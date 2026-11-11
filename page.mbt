@@ -77,34 +77,78 @@ pub fn Page::wrap_text(
   width : Double,
   size : Double,
 ) -> Array[String] {
-  let lines : Array[String] = []
-  let current = StringBuilder()
-  let mut current_width = 0.0
+  // Working in code points makes it easy to move a partial line to the next
+  // row when we back up to a space.
+  let chars : Array[Char] = []
   for ch in text {
-    if ch == '\n' {
-      lines.push(current.to_string())
-      current.reset()
-      current_width = 0.0
+    chars.push(ch)
+  }
+  let lines : Array[String] = []
+  let mut cursor = 0
+  let n = chars.length()
+  while cursor < n {
+    // A hard newline ends the line immediately.
+    if chars[cursor] == '\n' {
+      lines.push("")
+      cursor = cursor + 1
       continue
     }
-    let advance = self.char_width(ch, size)
-    if current_width + advance > width && !current.is_empty() {
-      // Break here. If the character would have followed a space, the space
-      // stays at the end of the previous line and we do not indent the next.
-      lines.push(current.to_string())
-      current.reset()
-      current_width = 0.0
-      if ch == ' ' {
-        continue
+    // Measure forward until the line overflows or we hit a newline.
+    let chunk : Array[Char] = []
+    let mut chunk_width = 0.0
+    let mut index = cursor
+    while index < n && chars[index] != '\n' {
+      let advance = self.char_width(chars[index], size)
+      if chunk_width + advance > width && chunk.length() > 0 {
+        break
       }
+      chunk.push(chars[index])
+      chunk_width = chunk_width + advance
+      index = index + 1
     }
-    current.write_char(ch)
-    current_width = current_width + advance
-  }
-  if !current.is_empty() {
-    lines.push(current.to_string())
+    if index >= n || chars[index] == '\n' {
+      // Everything that is left fits on this line.
+      lines.push(string_of_chars(chunk))
+      cursor = index
+      if cursor < n && chars[cursor] == '\n' {
+        cursor = cursor + 1
+      }
+      continue
+    }
+    // Overflowed. Back up to the last space so we do not split a word, but only
+    // when that space is not at the very start of the line.
+    let mut break_at = -1
+    let mut i = chunk.length() - 1
+    while i > 0 {
+      if chunk[i] == ' ' {
+        break_at = i
+        break
+      }
+      i = i - 1
+    }
+    if break_at > 0 {
+      let head : Array[Char] = []
+      for k in 0..<break_at {
+        head.push(chunk[k])
+      }
+      lines.push(string_of_chars(head))
+      cursor = cursor + break_at + 1 // skip the space
+    } else {
+      lines.push(string_of_chars(chunk))
+      cursor = cursor + chunk.length()
+    }
   }
   lines
+}
+
+///|
+/// Join code points into a string.
+fn string_of_chars(chars : Array[Char]) -> String {
+  let out = StringBuilder()
+  for ch in chars {
+    out.write_char(ch)
+  }
+  out.to_string()
 }
 
 ///|
@@ -119,13 +163,7 @@ pub fn Page::paragraph(
   line_height : Double,
   text : String,
 ) -> Double {
-  let lines = self.wrap_text(text, width, size)
-  let mut cursor = y
-  for line in lines {
-    self.text(x, cursor, size, line)
-    cursor = cursor + line_height
-  }
-  cursor
+  self.paragraph_aligned(x, y, width, size, line_height, Left, text)
 }
 
 ///|
@@ -173,9 +211,78 @@ pub fn Page::text_with_font(
     text,
     offset_x: 0.0,
     offset_y: size,
+    glyph_offsets: [],
   }
   self.objects.push(Text(obj))
   obj
+}
+
+///|
+/// Draw `text` with explicit per-character X offsets, measured from `x`. This is
+/// the primitive behind letter spacing and justification: the caller decides
+/// where each glyph goes, and each one becomes its own `TextCode`.
+pub fn Page::text_at_offsets(
+  self : Page,
+  x : Double,
+  y : Double,
+  size : Double,
+  text : String,
+  offsets : Array[Double],
+) -> TextObject {
+  // The bounding box has to cover the last glyph, not the sum of the advances,
+  // because spacing may push characters past a natural `measure_text`.
+  let last = offsets.length() - 1
+  let mut last_char : Char = ' '
+  let mut seen = 0
+  for ch in text {
+    if seen == last {
+      last_char = ch
+    }
+    seen = seen + 1
+  }
+  let mut width = self.measure_text(text, size)
+  if last >= 0 {
+    let tail = if seen > 0 { self.char_width(last_char, size) } else { 0.0 }
+    width = if offsets[last] + tail > width {
+      offsets[last] + tail
+    } else {
+      width
+    }
+  }
+  let height = size * 1.2
+  let obj = {
+    id: self.alloc_id(),
+    boundary: { x, y, width, height, },
+    font_id: self.default_font,
+    size,
+    color: Color::black(),
+    text,
+    offset_x: 0.0,
+    offset_y: size,
+    glyph_offsets: offsets,
+  }
+  self.objects.push(Text(obj))
+  obj
+}
+
+///|
+/// Draw `text` with `spacing` millimetres inserted after every character.
+/// Negative values tighten the run.
+pub fn Page::text_spaced(
+  self : Page,
+  x : Double,
+  y : Double,
+  size : Double,
+  spacing : Double,
+  text : String,
+) -> Unit {
+  let offsets : Array[Double] = []
+  let mut cursor = 0.0
+  for ch in text {
+    offsets.push(cursor)
+    cursor = cursor + self.char_width(ch, size) + spacing
+  }
+  ignore(self.text_at_offsets(x, y, size, text, offsets))
 }
 
 ///|
@@ -200,6 +307,34 @@ pub fn Page::line_object(
   y2 : Double,
   line_width : Double,
 ) -> PathObject {
+  self.line_object_with(x1, y1, x2, y2, line_width, Color::black())
+}
+
+///|
+/// Draw a straight line in a given colour. Table rules use this so a grid can be
+/// grey instead of printer-black.
+pub fn Page::line_colored(
+  self : Page,
+  x1 : Double,
+  y1 : Double,
+  x2 : Double,
+  y2 : Double,
+  line_width : Double,
+  color : Color,
+) -> Unit {
+  ignore(self.line_object_with(x1, y1, x2, y2, line_width, color))
+}
+
+///|
+fn Page::line_object_with(
+  self : Page,
+  x1 : Double,
+  y1 : Double,
+  x2 : Double,
+  y2 : Double,
+  line_width : Double,
+  color : Color,
+) -> PathObject {
   let left = if x1 < x2 { x1 } else { x2 }
   let top = if y1 < y2 { y1 } else { y2 }
   let dx = if x1 < x2 { x2 - x1 } else { x1 - x2 }
@@ -213,8 +348,8 @@ pub fn Page::line_object(
     line_width: thickness,
     stroke: true,
     fill: false,
-    stroke_color: Color::black(),
-    fill_color: Color::black(),
+    stroke_color: color,
+    fill_color: color,
     data: "M 0 0 L \{fmt_mm(dx)} \{fmt_mm(dy)}",
   }
   self.objects.push(Path(obj))

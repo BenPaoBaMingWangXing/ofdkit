@@ -178,20 +178,22 @@ def main():
         boundary = [float(v) for v in obj.get("Boundary").split()]
         size = float(obj.get("Size", "4"))
         fill = colour(obj.find("ofd:FillColor", NS)) or (0, 0, 0)
-        code = obj.find("ofd:TextCode", NS)
-        if code is None or not code.text:
-            continue
-        offset_x = float(code.get("X", "0"))
-        offset_y = float(code.get("Y", "0"))
-        # Baseline sits above the bottom edge of the boundary box.
-        baseline_y = boundary[1] + boundary[3] - offset_y
-        draw.text(
-            ((boundary[0] + offset_x) * SCALE, baseline_y * SCALE),
-            code.text,
-            font=font_for(max(8, int(size * SCALE))),
-            fill=fill + (255,),
-            anchor="ls",
-        )
+        # A run can carry several TextCode elements when the generator places
+        # each glyph explicitly (letter spacing, justification).
+        for code in obj.findall("ofd:TextCode", NS):
+            if not code.text:
+                continue
+            offset_x = float(code.get("X", "0"))
+            offset_y = float(code.get("Y", "0"))
+            # Baseline sits above the bottom edge of the boundary box.
+            baseline_y = boundary[1] + boundary[3] - offset_y
+            draw.text(
+                ((boundary[0] + offset_x) * SCALE, baseline_y * SCALE),
+                code.text,
+                font=font_for(max(8, int(size * SCALE))),
+                fill=fill + (255,),
+                anchor="ls",
+            )
 
     image.save(png_path)
     print(f"wrote {png_path} ({width}x{height} px, page {page_index})")
