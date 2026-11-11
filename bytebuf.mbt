@@ -8,26 +8,26 @@
 ///|
 pub struct ByteBuf {
   mut data : FixedArray[Byte]
-  mut len : Int
+  mut len : Int32
 }
 
 ///|
 pub fn ByteBuf::new() -> ByteBuf {
-  { data: FixedArray::make(256, b'\x00'), len: 0 }
+  { data: FixedArray::make(256, b'\x00'), len: 0, }
 }
 
 ///|
-pub fn ByteBuf::with_capacity(capacity : Int) -> ByteBuf {
-  { data: FixedArray::make(capacity, b'\x00'), len: 0 }
+pub fn ByteBuf::with_capacity(capacity : Int32) -> ByteBuf {
+  { data: FixedArray::make(capacity, b'\x00'), len: 0, }
 }
 
 ///|
-pub fn ByteBuf::length(self : ByteBuf) -> Int {
+pub fn ByteBuf::length(self : ByteBuf) -> Int32 {
   self.len
 }
 
 ///|
-fn ByteBuf::grow(self : ByteBuf, need : Int) -> Unit {
+fn ByteBuf::grow(self : ByteBuf, need : Int32) -> Unit {
   let required = self.len + need
   if required <= self.data.length() {
     return
@@ -54,13 +54,13 @@ pub fn ByteBuf::write_byte(self : ByteBuf, value : Byte) -> Unit {
 }
 
 ///|
-pub fn ByteBuf::write_u16_le(self : ByteBuf, value : UInt) -> Unit {
+pub fn ByteBuf::write_u16_le(self : ByteBuf, value : UInt32) -> Unit {
   self.write_byte((value & 0xFFU).to_byte())
   self.write_byte(((value >> 8) & 0xFFU).to_byte())
 }
 
 ///|
-pub fn ByteBuf::write_u32_le(self : ByteBuf, value : UInt) -> Unit {
+pub fn ByteBuf::write_u32_le(self : ByteBuf, value : UInt32) -> Unit {
   self.write_byte((value & 0xFFU).to_byte())
   self.write_byte(((value >> 8) & 0xFFU).to_byte())
   self.write_byte(((value >> 16) & 0xFFU).to_byte())

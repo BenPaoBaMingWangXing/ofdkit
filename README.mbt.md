@@ -25,7 +25,7 @@ JSON / 业务数据  →  ofdkit  →  xxx.ofd  →  OFD 阅读器
 - **不读取、不渲染 OFD**。这是生成侧工具，没有版面解析和栅格化能力。
 - **不嵌入字体文件**。`PublicRes.xml` 里目前只声明字体名（默认 `SimSun`），由阅读器按名替换。嵌入 TrueType 子集是下一阶段的工作。
 - **不支持签章**。GB/T 38540 的电子签章（`Signatures.xml` / `Seal.esl` / `SignedValue.dat`）尚未实现。
-- **不支持图片对象**（`ImageObject`），模型里有占位类型但没有序列化输出。
+- **不支持图片对象**（`ImageObject`）。
 - **不支持自动换行、对齐、字间距**。文本按单行绘制，调用方给位置和宽度估算。
 - **ZIP 只写 store 模式**（不压缩）。包体积因此偏大，但结构完全合法且可复现。
 
@@ -39,12 +39,13 @@ moon add BenPaoBaMingWangXing/ofdkit
 
 ## 快速开始
 
-```mbt
+```mbt nocheck
+///|
 fn build_report() -> Bytes {
   let doc = @ofdkit.Document::new()
     .set_title("月度报表")
     .set_author("财务部")
-  let page = doc.add_page()          // A4, 210 x 297 mm
+  let page = doc.add_page() // A4, 210 x 297 mm
   page.text(20.0, 30.0, 10.0, "月度报表")
   page.line(20.0, 38.0, 190.0, 38.0, 0.4)
   page.text(20.0, 50.0, 5.0, "本期收入较上期增长 12.4%。")

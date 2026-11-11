@@ -93,7 +93,6 @@ pub fn Document::to_bytes(Self) -> Bytes
 pub enum DrawObject {
   Text(TextObject)
   Path(PathObject)
-  Image(ImageObject)
 }
 
 pub struct Font {
@@ -104,12 +103,6 @@ pub struct Font {
 }
 pub fn Font::embedded(Int32, String, Bytes) -> Self
 pub fn Font::named(Int32, String) -> Self
-
-pub struct ImageObject {
-  id : Int32
-  boundary : Rect
-  resource_id : Int32
-}
 
 pub struct Page {
   id : Int32
@@ -200,7 +193,7 @@ type ZipEntry
 
 pub struct ZipEntryInfo {
   name : String
-  method : UInt32
+  compression : UInt32
   crc : UInt32
   compressed_size : Int32
   uncompressed_size : Int32

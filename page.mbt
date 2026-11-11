@@ -3,7 +3,7 @@
 /// that was appended, so callers can keep a handle for later tweaks.
 
 ///|
-fn Page::alloc_id(self : Page) -> Int {
+fn Page::alloc_id(self : Page) -> Int32 {
   let id = self.next_id
   self.next_id = self.next_id + 1
   id
@@ -60,14 +60,14 @@ pub fn Page::text_with_font(
   x : Double,
   y : Double,
   size : Double,
-  font_id : Int,
+  font_id : Int32,
   text : String,
 ) -> TextObject {
   let width = estimate_text_width(text, size)
   let height = size * 1.2
   let obj = {
     id: self.alloc_id(),
-    boundary: { x, y, width, height },
+    boundary: { x, y, width, height, },
     font_id,
     size,
     color: Color::black(),
@@ -110,7 +110,7 @@ pub fn Page::line_object(
   let height = if dy > thickness { dy } else { thickness }
   let obj = {
     id: self.alloc_id(),
-    boundary: { x: left, y: top, width, height },
+    boundary: { x: left, y: top, width, height, },
     line_width: thickness,
     stroke: true,
     fill: false,
@@ -147,7 +147,7 @@ pub fn Page::rect_object(
   let thickness = if line_width > 0.0 { line_width } else { 0.1 }
   let obj = {
     id: self.alloc_id(),
-    boundary: { x, y, width, height },
+    boundary: { x, y, width, height, },
     line_width: thickness,
     stroke: true,
     fill: false,
@@ -183,7 +183,7 @@ pub fn Page::fill_rect_object(
 ) -> PathObject {
   let obj = {
     id: self.alloc_id(),
-    boundary: { x, y, width, height },
+    boundary: { x, y, width, height, },
     line_width: 0.0,
     stroke: false,
     fill: true,
@@ -223,7 +223,7 @@ pub fn Page::path_object(
   let thickness = if line_width > 0.0 { line_width } else { 0.1 }
   let obj = {
     id: self.alloc_id(),
-    boundary: { x, y, width, height },
+    boundary: { x, y, width, height, },
     line_width: thickness,
     stroke: true,
     fill: false,
@@ -236,6 +236,6 @@ pub fn Page::path_object(
 }
 
 ///|
-pub fn Page::object_count(self : Page) -> Int {
+pub fn Page::object_count(self : Page) -> Int32 {
   self.objects.length()
 }

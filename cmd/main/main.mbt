@@ -36,8 +36,12 @@ fn build_demo() -> @ofdkit.Document {
   page.text(20.0, 52.0, 12.0, "OFD 文档生成器")
   page.text(20.0, 70.0, 6.0, "纯 MoonBit 实现 · 符合 GB/T 33190-2016")
   page.line(20.0, 80.0, 190.0, 80.0, 0.4)
-  page.text(20.0, 95.0, 5.0, "本文档由 ofdkit 生成，用于验证包结构、文本对象与图形对象。")
-  page.text(20.0, 104.0, 5.0, "文本支持中文与 ASCII 混排，图形支持直线与矩形。")
+  page.text(
+    20.0, 95.0, 5.0, "本文档由 ofdkit 生成，用于验证包结构、文本对象与图形对象。",
+  )
+  page.text(
+    20.0, 104.0, 5.0, "文本支持中文与 ASCII 混排，图形支持直线与矩形。",
+  )
   // A simple table drawn with paths.
   page.rect(20.0, 120.0, 170.0, 40.0, 0.3)
   page.line(20.0, 133.0, 190.0, 133.0, 0.2)
@@ -57,7 +61,9 @@ fn build_demo() -> @ofdkit.Document {
   // Page 2 — second page proves the page list and BaseLoc wiring.
   let page2 = doc.add_page()
   page2.text(20.0, 30.0, 8.0, "第二页")
-  page2.text(20.0, 45.0, 5.0, "多页文档中每一页拥有独立的 Content.xml。")
+  page2.text(
+    20.0, 45.0, 5.0, "多页文档中每一页拥有独立的 Content.xml。",
+  )
   page2.line(20.0, 55.0, 120.0, 55.0, 0.3)
   doc
 }
@@ -68,7 +74,9 @@ fn cmd_demo(path : String) -> Unit {
   let bytes = doc.to_bytes()
   try {
     @fs.write_bytes_to_file(path, bytes)
-    println("已生成 \{path}（\{bytes.length()} 字节，\{doc.page_count()} 页）")
+    println(
+      "已生成 \{path}（\{bytes.length()} 字节，\{doc.page_count()} 页）",
+    )
   } catch {
     @fs.IOError(message) => println("写入失败: \{message}")
   }
@@ -76,9 +84,7 @@ fn cmd_demo(path : String) -> Unit {
 
 ///|
 fn cmd_verify(path : String) -> Unit {
-  let bytes = try {
-    @fs.read_file_to_bytes(path)
-  } catch {
+  let bytes = @fs.read_file_to_bytes(path) catch {
     @fs.IOError(message) => {
       println("读取失败: \{message}")
       return
@@ -100,9 +106,7 @@ fn cmd_verify(path : String) -> Unit {
 
 ///|
 fn cmd_info(path : String) -> Unit {
-  let bytes = try {
-    @fs.read_file_to_bytes(path)
-  } catch {
+  let bytes = @fs.read_file_to_bytes(path) catch {
     @fs.IOError(message) => {
       println("读取失败: \{message}")
       return

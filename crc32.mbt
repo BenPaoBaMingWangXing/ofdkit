@@ -5,11 +5,11 @@
 /// uncompressed bytes. The table is built once and shared.
 
 ///|
-let crc32_table : Array[UInt] = make_crc32_table()
+let crc32_table : Array[UInt32] = make_crc32_table()
 
 ///|
-fn make_crc32_table() -> Array[UInt] {
-  let table : Array[UInt] = Array::make(256, 0U)
+fn make_crc32_table() -> Array[UInt32] {
+  let table : Array[UInt32] = Array::make(256, 0U)
   for i in 0..<256 {
     let mut c = i.reinterpret_as_uint()
     for _ in 0..<8 {
@@ -27,12 +27,12 @@ fn make_crc32_table() -> Array[UInt] {
 ///|
 /// Incremental CRC-32 state. Call `update` for each chunk, then `finalize`.
 pub struct Crc32 {
-  mut value : UInt
+  mut value : UInt32
 }
 
 ///|
 pub fn Crc32::new() -> Crc32 {
-  { value: 0xFFFFFFFFU }
+  { value: 0xFFFFFFFFU, }
 }
 
 ///|
@@ -47,12 +47,12 @@ pub fn Crc32::update(self : Crc32, data : Bytes) -> Unit {
 }
 
 ///|
-pub fn Crc32::finalize(self : Crc32) -> UInt {
+pub fn Crc32::finalize(self : Crc32) -> UInt32 {
   self.value ^ 0xFFFFFFFFU
 }
 
 ///|
-pub fn crc32(data : Bytes) -> UInt {
+pub fn crc32(data : Bytes) -> UInt32 {
   let c = Crc32::new()
   c.update(data)
   c.finalize()

@@ -9,9 +9,9 @@
 ///|
 struct ZipEntry {
   name : String
-  crc : UInt
-  size : UInt
-  offset : UInt
+  crc : UInt32
+  size : UInt32
+  offset : UInt32
 }
 
 ///|
@@ -23,17 +23,17 @@ pub struct ZipWriter {
 
 ///|
 pub fn ZipWriter::new() -> ZipWriter {
-  { out: ByteBuf::new(), entries: [], finished: false }
+  { out: ByteBuf::new(), entries: [], finished: false, }
 }
 
 ///|
 /// MS-DOS timestamp for 1980-01-01 00:00:00, the ZIP epoch.
 /// OFD does not care about timestamps, so a fixed value keeps output
 /// byte-for-byte reproducible.
-const DOS_TIME : UInt = 0x0000U
+const DOS_TIME : UInt32 = 0x0000U
 
 ///|
-const DOS_DATE : UInt = 0x0021U
+const DOS_DATE : UInt32 = 0x0021U
 
 ///|
 /// Append one file. `name` must be an ASCII path relative to the archive root,
@@ -64,12 +64,12 @@ pub fn ZipWriter::add_file(
   self.out.write_u16_le(0U) // extra field length
   self.out.write_bytes(name_bytes)
   self.out.write_bytes(data)
-  self.entries.push({ name, crc, size, offset })
+  self.entries.push({ name, crc, size, offset, })
 }
 
 ///|
 /// Number of files added so far.
-pub fn ZipWriter::entry_count(self : ZipWriter) -> Int {
+pub fn ZipWriter::entry_count(self : ZipWriter) -> Int32 {
   self.entries.length()
 }
 

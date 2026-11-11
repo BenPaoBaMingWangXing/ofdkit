@@ -14,7 +14,7 @@ pub fn fmt_mm(value : Double) -> String {
 ///|
 /// Three decimal places are enough for geometry; this trims the trailing noise
 /// that `Double::to_string` can leave behind.
-pub fn fmt_hex(value : UInt) -> String {
+pub fn fmt_hex(value : UInt32) -> String {
   let digits : Array[Char] = [
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
   ]

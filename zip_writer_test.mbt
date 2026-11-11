@@ -1,6 +1,6 @@
 ///|
 /// Read a little-endian u32 at `offset`, used by structural assertions.
-fn peek_u32(data : Bytes, offset : Int) -> UInt {
+fn peek_u32(data : Bytes, offset : Int32) -> UInt32 {
   data[offset].to_uint() |
   (data[offset + 1].to_uint() << 8) |
   (data[offset + 2].to_uint() << 16) |

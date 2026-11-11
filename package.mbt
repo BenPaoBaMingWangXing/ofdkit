@@ -3,13 +3,13 @@
 
 ///|
 /// Path of the content stream for page `index`.
-pub fn page_content_path(index : Int) -> String {
+pub fn page_content_path(index : Int32) -> String {
   "Doc_0/Pages/Page_\{index}/Content.xml"
 }
 
 ///|
 /// Path of an embedded font inside the package.
-pub fn font_file_path(font_id : Int) -> String {
+pub fn font_file_path(font_id : Int32) -> String {
   "Doc_0/Res/Font_\{font_id}.ttf"
 }
 
