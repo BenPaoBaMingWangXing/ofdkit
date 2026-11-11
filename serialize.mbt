@@ -96,6 +96,23 @@ pub fn serialize_document(doc : Document) -> String {
     ])
   }
   xml.close("ofd:Pages")
+  if doc.outlines.length() > 0 {
+    xml.open("ofd:Outlines", [])
+    for outline in doc.outlines {
+      xml.open("ofd:Outline", [
+        ("ID", outline.id.to_string()),
+        ("Title", outline.title),
+        ("Level", outline.level.to_string()),
+      ])
+      xml.open("ofd:Actions", [])
+      xml.open("ofd:Action", [("Type", "Goto")])
+      xml.leaf("ofd:Dest", [], outline.page_id.to_string())
+      xml.close("ofd:Action")
+      xml.close("ofd:Actions")
+      xml.close("ofd:Outline")
+    }
+    xml.close("ofd:Outlines")
+  }
   xml.close("ofd:Document")
   xml.to_string()
 }

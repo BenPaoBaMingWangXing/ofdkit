@@ -76,12 +76,14 @@ fn build_demo(doc : @ofdkit.Document, image_id : Int32?) -> Unit {
   page.fill_rect(55.0, 158.0, 30.0, 12.0, @ofdkit.Color::new(60, 160, 90))
   page.fill_rect(90.0, 158.0, 30.0, 12.0, @ofdkit.Color::new(70, 110, 210))
   page.text(20.0, 176.0, 4.0, demo_texts[13])
+  doc.add_outline(demo_texts[1], page, 1)
   match image_id {
     None => ()
     Some(id) => page.image(135.0, 152.0, 55.0, 33.0, id)
   }
   // Page 2 — proves the page list and BaseLoc wiring.
   let page2 = doc.add_page()
+  doc.add_outline(demo_texts[5], page2, 1)
   page2.text_aligned(20.0, 30.0, 170.0, 8.0, @ofdkit.Center, demo_texts[5])
   page2.line(20.0, 42.0, 190.0, 42.0, 0.3)
   // A long paragraph, wrapped by the page itself.

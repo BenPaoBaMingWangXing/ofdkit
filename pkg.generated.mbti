@@ -105,10 +105,12 @@ pub struct Document {
   mut next_id : Int32
   mut primary_font : Int32
   images : Array[ImageResource]
+  outlines : Array[Outline]
 }
 pub fn Document::add_embedded_font(Self, String, Bytes) -> Int32
 pub fn Document::add_font(Self, String) -> Int32
 pub fn Document::add_image(Self, Bytes) -> Result[Int32, String]
+pub fn Document::add_outline(Self, String, Page, Int32) -> Unit
 pub fn Document::add_page(Self) -> Page
 pub fn Document::add_page_sized(Self, Double, Double) -> Page
 pub fn Document::alloc_id(Self) -> Int32
@@ -117,6 +119,7 @@ pub fn Document::embed_font_for_text(Self, String, Bytes, String) -> Result[Int3
 pub fn Document::entry_names(Self) -> Array[String]
 pub fn Document::max_unit_id(Self) -> Int32
 pub fn Document::new() -> Self
+pub fn Document::outline_count(Self) -> Int32
 pub fn Document::page_count(Self) -> Int32
 pub fn Document::primary_font_id(Self) -> Int32
 pub fn Document::set_author(Self, String) -> Self
@@ -157,6 +160,13 @@ pub struct ImageResource {
   id : Int32
   format : ImageFormat
   data : Bytes
+}
+
+pub struct Outline {
+  id : Int32
+  title : String
+  page_id : Int32
+  level : Int32
 }
 
 pub struct Page {
