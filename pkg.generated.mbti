@@ -49,6 +49,12 @@ pub fn xml_escape(String) -> String
 // Errors
 
 // Types and methods
+pub(all) enum Align {
+  Left
+  Center
+  Right
+}
+
 pub struct ByteBuf {
   mut data : FixedArray[Byte]
   mut len : Int32
@@ -164,6 +170,7 @@ pub struct Page {
 }
 pub fn Page::fill_rect(Self, Double, Double, Double, Double, Color) -> Unit
 pub fn Page::fill_rect_object(Self, Double, Double, Double, Double, Color) -> PathObject
+pub fn Page::fit_text(Self, String, Double, Double) -> String
 pub fn Page::image(Self, Double, Double, Double, Double, Int32) -> Unit
 pub fn Page::line(Self, Double, Double, Double, Double, Double) -> Unit
 pub fn Page::line_object(Self, Double, Double, Double, Double, Double) -> PathObject
@@ -174,7 +181,9 @@ pub fn Page::path(Self, Double, Double, Double, Double, String, Double) -> Unit
 pub fn Page::path_object(Self, Double, Double, Double, Double, String, Double) -> PathObject
 pub fn Page::rect(Self, Double, Double, Double, Double, Double) -> Unit
 pub fn Page::rect_object(Self, Double, Double, Double, Double, Double) -> PathObject
+pub fn Page::table(Self, TableStyle, Array[Array[String]]) -> Double
 pub fn Page::text(Self, Double, Double, Double, String) -> Unit
+pub fn Page::text_aligned(Self, Double, Double, Double, Double, Align, String) -> Unit
 pub fn Page::text_object(Self, Double, Double, Double, String) -> TextObject
 pub fn Page::text_with_font(Self, Double, Double, Double, Int32, String) -> TextObject
 pub fn Page::wrap_text(Self, String, Double, Double) -> Array[String]
@@ -197,6 +206,24 @@ pub struct Rect {
   height : Double
 }
 pub fn Rect::new(Double, Double, Double, Double) -> Self
+
+pub struct TableStyle {
+  x : Double
+  y : Double
+  column_widths : Array[Double]
+  row_height : Double
+  font_size : Double
+  line_width : Double
+  padding : Double
+  header : Bool
+  header_fill : Color
+  text_offset : Double
+}
+pub fn TableStyle::new(Double, Double, Array[Double]) -> Self
+pub fn TableStyle::width(Self) -> Double
+pub fn TableStyle::with_font_size(Self, Double) -> Self
+pub fn TableStyle::with_row_height(Self, Double) -> Self
+pub fn TableStyle::without_header(Self) -> Self
 
 pub struct TextObject {
   id : Int32

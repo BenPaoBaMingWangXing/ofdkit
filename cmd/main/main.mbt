@@ -53,7 +53,7 @@ fn build_demo(doc : @ofdkit.Document, image_id : Int32?) -> Unit {
   let page = doc.add_page()
   page.fill_rect(0.0, 0.0, 210.0, 40.0, @ofdkit.Color::new(24, 64, 140))
   page.text(20.0, 18.0, 8.0, demo_texts[0])
-  page.text(20.0, 52.0, 12.0, demo_texts[1])
+  page.text_aligned(20.0, 52.0, 170.0, 12.0, @ofdkit.Center, demo_texts[1])
   page.text(20.0, 70.0, 6.0, demo_texts[2])
   page.line(20.0, 80.0, 190.0, 80.0, 0.4)
   // One wrapped paragraph instead of two hand-placed lines: the page measures
@@ -61,31 +61,40 @@ fn build_demo(doc : @ofdkit.Document, image_id : Int32?) -> Unit {
   ignore(
     page.paragraph(20.0, 95.0, 170.0, 5.0, 7.0, demo_texts[3] + demo_texts[4]),
   )
-  // A simple table drawn with paths.
-  page.rect(20.0, 120.0, 170.0, 40.0, 0.3)
-  page.line(20.0, 133.0, 190.0, 133.0, 0.2)
-  page.line(20.0, 146.0, 190.0, 146.0, 0.2)
-  page.line(80.0, 120.0, 80.0, 160.0, 0.2)
-  page.text(24.0, 124.0, 4.5, demo_texts[7])
-  page.text(84.0, 124.0, 4.5, demo_texts[8])
-  page.text(24.0, 137.0, 4.5, demo_texts[9])
-  page.text(84.0, 137.0, 4.5, demo_texts[10])
-  page.text(24.0, 150.0, 4.5, demo_texts[11])
-  page.text(84.0, 150.0, 4.5, demo_texts[12])
+  // A table via the layout helper: header row filled, rules on real column
+  // widths, cell text truncated with an ellipsis when it does not fit.
+  let style = @ofdkit.TableStyle::new(20.0, 118.0, [40.0, 130.0])
+  ignore(
+    page.table(style, [
+      [demo_texts[7], demo_texts[8]],
+      [demo_texts[9], demo_texts[10]],
+      [demo_texts[11], demo_texts[12]],
+    ]),
+  )
   // Colour swatches.
-  page.fill_rect(20.0, 175.0, 30.0, 12.0, @ofdkit.Color::new(220, 60, 60))
-  page.fill_rect(55.0, 175.0, 30.0, 12.0, @ofdkit.Color::new(60, 160, 90))
-  page.fill_rect(90.0, 175.0, 30.0, 12.0, @ofdkit.Color::new(70, 110, 210))
-  page.text(20.0, 196.0, 4.0, demo_texts[13])
+  page.fill_rect(20.0, 158.0, 30.0, 12.0, @ofdkit.Color::new(220, 60, 60))
+  page.fill_rect(55.0, 158.0, 30.0, 12.0, @ofdkit.Color::new(60, 160, 90))
+  page.fill_rect(90.0, 158.0, 30.0, 12.0, @ofdkit.Color::new(70, 110, 210))
+  page.text(20.0, 176.0, 4.0, demo_texts[13])
   match image_id {
     None => ()
-    Some(id) => page.image(140.0, 170.0, 50.0, 30.0, id)
+    Some(id) => page.image(135.0, 152.0, 55.0, 33.0, id)
   }
   // Page 2 — proves the page list and BaseLoc wiring.
   let page2 = doc.add_page()
-  page2.text(20.0, 30.0, 8.0, demo_texts[5])
-  page2.text(20.0, 45.0, 5.0, demo_texts[6])
-  page2.line(20.0, 55.0, 120.0, 55.0, 0.3)
+  page2.text_aligned(20.0, 30.0, 170.0, 8.0, @ofdkit.Center, demo_texts[5])
+  page2.line(20.0, 42.0, 190.0, 42.0, 0.3)
+  // A long paragraph, wrapped by the page itself.
+  ignore(
+    page2.paragraph(
+      20.0,
+      52.0,
+      170.0,
+      5.0,
+      8.0,
+      demo_texts[6] + demo_texts[3] + demo_texts[4] + demo_texts[6],
+    ),
+  )
   ()
 }
 

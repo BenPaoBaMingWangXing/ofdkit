@@ -8,6 +8,10 @@ OFD（Open Fixed-layout Document，开放式版式文档）是国家标准 **GB/
 业务数据  →  ofdkit  →  xxx.ofd  →  OFD 阅读器
 ```
 
+<img src="docs/preview-page1.png" width="400" alt="示例文档第 1 页" /> <img src="docs/preview-page2.png" width="400" alt="示例文档第 2 页" />
+
+<sub>上面两页由 `ofdkit demo` 生成，嵌入黑体子集与一张 PNG 印章；用仓库内的 `scripts/preview_ofd.py` 从生成的 `.ofd` 直接渲染出来。</sub>
+
 ## 现在能做什么
 
 - 生成符合标准包结构的 `.ofd` 文件（ZIP 容器 + `OFD.xml` 入口 + `Doc_0/Document.xml` + 每页 `Content.xml`）
@@ -17,6 +21,7 @@ OFD（Open Fixed-layout Document，开放式版式文档）是国家标准 **GB/
 - **TrueType 字体嵌入与子集化**：给一个字库文件和使用到的文本，ofdkit 只保留需要的中文字形，把 9.7 MB 的黑体压到 130 KB 级别
 - **基于真实字形的文本度量与自动换行**：有嵌入字体时按字体的 advance width 排版，宽度与 FreeType 逐位一致
 - **图片对象**：PNG / JPEG 原样打包进 `DocumentRes.xml`，按毫米框定位（印章、logo 这类）
+- **表格与对齐**：`page.table()` 画网格、填表头底色、按列宽截断单元格文本；`page.text_aligned()` 支持左/中/右对齐
 - 文档元数据：标题、作者、主题、关键词、创建日期
 - 结构自校验：`ofdkit verify` 会重新解析生成的包，逐项检查必需文件、引用、对象 ID 上限，以及嵌入字体是不是真的字体
 
@@ -133,6 +138,27 @@ Doc_0/Res/Font_1.ttf            子集化后的嵌入字体
 
 验证方式是把子集从包里取出来，交给 FreeType（经 Pillow）真实渲染，逐字检查无缺字——不是"文件能打开"就算过。
 
+## 表格与对齐
+
+报表里最常画的其实是表格。`TableStyle` 只需要列宽，行数从数据推出来：
+
+```mbt
+let style = @ofdkit.TableStyle::new(20.0, 118.0, [40.0, 130.0])
+let bottom = page.table(style, [
+  ["项目", "说明"],
+  ["容器", "ZIP，入口 OFD.xml"],
+  ["内容", "XML 内容流，单位毫米"],
+])
+```
+
+默认 6.5 mm 行高、4.2 pt 字号、0.2 mm 细线、表头浅灰底。单元格文字在列宽内放不下时按字符截断并补省略号——报表里一个盖住邻格的单元格，比一个老实承认被截断的更糟。
+
+对齐是同一套度量的直接应用：
+
+```mbt
+page.text_aligned(20.0, 52.0, 170.0, 12.0, @ofdkit.Center, "标题")
+```
+
 ## 文本度量
 
 有嵌入字体时，`page.measure_text()` 走的是字体自己的 `hmtx`：把所有字符的 advance width 加起来，除以 `unitsPerEm` 再乘字号。没有嵌入字体时退化为"中文一字宽、ASCII 半字宽"的估算，只用来撑开包围盒。
@@ -190,12 +216,13 @@ let next_y = page.paragraph(20.0, 30.0, 170.0, 5.0, 8.0, "很长的一段中文�
 moon test
 ```
 
-46 个测试，覆盖 CRC-32 标准向量、ZIP 结构、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径、文本度量与换行、图片格式嗅探，以及若干负例（截断归档、缺页面流、字体文件不是字体、图片魔数不对）。
+56 个测试，覆盖 CRC-32 标准向量、ZIP 结构、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径、文本度量与换行、表格几何、对齐偏移、图片格式嗅探，以及若干负例（截断归档、缺页面流、字体文件不是字体、图片魔数不对）。
 
 ## 路线图
 
 - [ ] 字形重编号式完整子集（体积再降一个数量级）
 - [ ] 两端对齐与字间距
+- [ ] 跨页表格与自动换页
 - [ ] 文档大纲（`Outlines`）
 - [ ] GB/T 38540 电子签章
 
