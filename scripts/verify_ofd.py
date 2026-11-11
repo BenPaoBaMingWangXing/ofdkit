@@ -107,6 +107,16 @@ def main() -> None:
         table_count = struct.unpack(">H", data[4:6])[0]
         print(f"  font ok  {name}  {table_count} tables, {len(data)} bytes")
 
+    # Outline destinations must reference a page that exists.
+    outlines = document.findall(".//ofd:Outlines/ofd:Outline", NS)
+    if outlines:
+        page_ids = {p.get("ID") for p in pages}
+        for outline in outlines:
+            dest = outline.find(".//ofd:Dest", NS)
+            if dest is None or (dest.text or "").strip() not in page_ids:
+                fail(f"outline '{outline.get('Title')}' points at a missing page")
+        print(f"  outline ok  {len(outlines)} entries")
+
     # Images must be PNG or JPEG; OFD readers pick a decoder by subtype.
     for name in names:
         lowered = name.lower()

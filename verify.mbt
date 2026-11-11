@@ -213,6 +213,28 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
           "every page content stream exists", all_present, first_missing,
         )
       }
+      // Outline destinations must point at a page that exists.
+      let outline_dests = find_all_tag_inner(document_xml, "ofd:Dest")
+      if outline_dests.length() == 0 {
+        report.add("no outline entries", true, "")
+      } else {
+        let mut dangling = ""
+        for dest in outline_dests {
+          // A destination must name a page, not merely any element with that id.
+          if !document_xml.contains("ofd:Page ID=\"\{dest}\"") {
+            dangling = dest
+          }
+        }
+        report.add(
+          "outline destinations resolve",
+          dangling == "",
+          if dangling == "" {
+            "\{outline_dests.length()} entr(ies)"
+          } else {
+            "dangling page id \{dangling}"
+          },
+        )
+      }
       // Shared resources.
       match tag_inner(document_xml, "ofd:PublicRes") {
         None => report.add("shared resources absent", true, "no fonts declared")

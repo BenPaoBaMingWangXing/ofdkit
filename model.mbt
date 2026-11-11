@@ -118,6 +118,17 @@ pub struct ImageResource {
 }
 
 ///|
+/// One entry in the document outline, which readers show as a bookmark tree.
+pub struct Outline {
+  id : Int32
+  title : String
+  /// Page this entry jumps to.
+  page_id : Int32
+  /// Nesting depth, 1 being the top level.
+  level : Int32
+}
+
+///|
 /// Object placed on a page that paints a registered image.
 pub struct ImageObject {
   id : Int32
@@ -162,6 +173,7 @@ pub struct Document {
   /// Font used by new pages; 0 means "fall back to a named system font".
   mut primary_font : Int32
   images : Array[ImageResource]
+  outlines : Array[Outline]
 }
 
 ///|
@@ -179,6 +191,7 @@ pub fn Document::new() -> Document {
     next_id: 1,
     primary_font: 0,
     images: [],
+    outlines: [],
   }
 }
 
@@ -313,6 +326,34 @@ pub fn Document::add_image(
   let id = self.alloc_id()
   self.images.push({ id, format, data, })
   Ok(id)
+}
+
+///|
+/// Append an outline entry that jumps to `page`. `level` starts at 1; a deeper
+/// level nests under the previous entry of a shallower level.
+pub fn Document::add_outline(
+  self : Document,
+  title : String,
+  page : Page,
+  level : Int32,
+) -> Unit {
+  let id = self.alloc_id()
+  self.outlines.push({
+    id,
+    title,
+    page_id: page.id,
+    level: if level < 1 {
+      1
+    } else {
+      level
+    },
+  })
+}
+
+///|
+/// Number of outline entries.
+pub fn Document::outline_count(self : Document) -> Int32 {
+  self.outlines.length()
 }
 
 ///|

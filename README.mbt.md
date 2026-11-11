@@ -22,6 +22,7 @@ OFD（Open Fixed-layout Document，开放式版式文档）是国家标准 **GB/
 - **基于真实字形的文本度量与自动换行**：有嵌入字体时按字体的 advance width 排版，宽度与 FreeType 逐位一致
 - **图片对象**：PNG / JPEG 原样打包进 `DocumentRes.xml`，按毫米框定位（印章、logo 这类）
 - **表格与对齐**：`page.table()` 画网格、填表头底色、按列宽截断单元格文本；`page.text_aligned()` 支持左/中/右对齐
+- **文档大纲**：`doc.add_outline()` 写入阅读器的书签树，支持层级
 - 文档元数据：标题、作者、主题、关键词、创建日期
 - 结构自校验：`ofdkit verify` 会重新解析生成的包，逐项检查必需文件、引用、对象 ID 上限，以及嵌入字体是不是真的字体
 
@@ -163,6 +164,20 @@ let bottom = page.table(style, [
 page.text_aligned(20.0, 52.0, 170.0, 12.0, @ofdkit.Center, "标题")
 ```
 
+## 文档大纲
+
+长文档需要书签。`add_outline` 接受目标页面和层级：
+
+```mbt nocheck
+let cover = doc.add_page()
+let chapter = doc.add_page()
+doc.add_outline("封面", cover, 1)
+doc.add_outline("第一章", chapter, 1)
+doc.add_outline("1.1 背景", chapter, 2)
+```
+
+写进 `Document.xml` 的 `Outlines`，每项是一个 `Goto` 动作加页面 ID。校验器会确认每个目标都指向真实存在的页面——大纲指错页是阅读器里最难发现的一类坏链接。
+
 ## 文本度量
 
 有嵌入字体时，`page.measure_text()` 走的是字体自己的 `hmtx`：把所有字符的 advance width 加起来，除以 `unitsPerEm` 再乘字号。没有嵌入字体时退化为"中文一字宽、ASCII 半字宽"的估算，只用来撑开包围盒。
@@ -223,14 +238,13 @@ let next_y = page.paragraph(
 moon test
 ```
 
-56 个测试，覆盖 CRC-32 标准向量、ZIP 结构、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径、文本度量与换行、表格几何、对齐偏移、图片格式嗅探，以及若干负例（截断归档、缺页面流、字体文件不是字体、图片魔数不对）。
+62 个测试，覆盖 CRC-32 标准向量、ZIP 结构、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径、文本度量与换行、表格几何、对齐偏移、图片格式嗅探、大纲目标解析，以及若干负例（截断归档、缺页面流、字体文件不是字体、图片魔数不对）。
 
 ## 路线图
 
 - [ ] 字形重编号式完整子集（体积再降一个数量级）
 - [ ] 两端对齐与字间距
 - [ ] 跨页表格与自动换页
-- [ ] 文档大纲（`Outlines`）
 - [ ] GB/T 38540 电子签章
 
 ## 许可证
