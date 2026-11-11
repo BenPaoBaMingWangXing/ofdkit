@@ -48,7 +48,7 @@ fn demo_corpus() -> String {
 ///|
 /// Build a two-page demonstration document that exercises text, paths and
 /// colour fills.
-fn build_demo(doc : @ofdkit.Document) -> Unit {
+fn build_demo(doc : @ofdkit.Document, image_id : Int32?) -> Unit {
   // Page 1 — cover.
   let page = doc.add_page()
   page.fill_rect(0.0, 0.0, 210.0, 40.0, @ofdkit.Color::new(24, 64, 140))
@@ -59,14 +59,7 @@ fn build_demo(doc : @ofdkit.Document) -> Unit {
   // One wrapped paragraph instead of two hand-placed lines: the page measures
   // the text with the embedded font and breaks it at 170 mm.
   ignore(
-    page.paragraph(
-      20.0,
-      95.0,
-      170.0,
-      5.0,
-      7.0,
-      demo_texts[3] + demo_texts[4],
-    ),
+    page.paragraph(20.0, 95.0, 170.0, 5.0, 7.0, demo_texts[3] + demo_texts[4]),
   )
   // A simple table drawn with paths.
   page.rect(20.0, 120.0, 170.0, 40.0, 0.3)
@@ -84,6 +77,10 @@ fn build_demo(doc : @ofdkit.Document) -> Unit {
   page.fill_rect(55.0, 175.0, 30.0, 12.0, @ofdkit.Color::new(60, 160, 90))
   page.fill_rect(90.0, 175.0, 30.0, 12.0, @ofdkit.Color::new(70, 110, 210))
   page.text(20.0, 196.0, 4.0, demo_texts[13])
+  match image_id {
+    None => ()
+    Some(id) => page.image(140.0, 170.0, 50.0, 30.0, id)
+  }
   // Page 2 — proves the page list and BaseLoc wiring.
   let page2 = doc.add_page()
   page2.text(20.0, 30.0, 8.0, demo_texts[5])
@@ -103,7 +100,7 @@ fn read_font(path : String) -> Bytes? {
 }
 
 ///|
-fn cmd_demo(path : String, font_path : String?) -> Unit {
+fn cmd_demo(path : String, font_path : String?, image_path : String?) -> Unit {
   let doc = @ofdkit.Document::new()
     .set_title("ofdkit 示例文档")
     .set_author("ofdkit")
@@ -124,12 +121,29 @@ fn cmd_demo(path : String, font_path : String?) -> Unit {
           }
       }
   }
-  build_demo(doc)
+  let mut image_note = "未嵌入图片"
+  let mut image_id_opt : Int32? = None
+  match image_path {
+    None => ()
+    Some(image_file) =>
+      match read_font(image_file) {
+        None => ()
+        Some(bytes) =>
+          match doc.add_image(bytes) {
+            Err(message) => println("图片嵌入失败: \{message}")
+            Ok(image_id) => {
+              image_note = "嵌入图片 id=\{image_id}"
+              image_id_opt = Some(image_id)
+            }
+          }
+      }
+  }
+  build_demo(doc, image_id_opt)
   let bytes = doc.to_bytes()
   try {
     @fs.write_bytes_to_file(path, bytes)
     println(
-      "已生成 \{path}（\{bytes.length()} 字节，\{doc.page_count()} 页，\{font_note}）",
+      "已生成 \{path}（\{bytes.length()} 字节，\{doc.page_count()} 页，\{font_note}，\{image_note}）",
     )
   } catch {
     @fs.IOError(message) => println("写入失败: \{message}")
@@ -236,8 +250,19 @@ fn main {
   let path = args[2]
   match command {
     "demo" => {
-      let font_path = if args.length() >= 4 { Some(args[3]) } else { None }
-      cmd_demo(path, font_path)
+      let mut font_path : String? = None
+      let mut image_path : String? = None
+      for i in 3..<args.length() {
+        let candidate = args[i]
+        if candidate.has_suffix(".png") ||
+          candidate.has_suffix(".jpg") ||
+          candidate.has_suffix(".jpeg") {
+          image_path = Some(candidate)
+        } else if candidate.has_suffix(".ttf") || candidate.has_suffix(".otf") {
+          font_path = Some(candidate)
+        }
+      }
+      cmd_demo(path, font_path, image_path)
     }
     "verify" => cmd_verify(path)
     "info" => cmd_info(path)

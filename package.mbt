@@ -14,6 +14,22 @@ pub fn font_file_path(font_id : Int32) -> String {
 }
 
 ///|
+/// File name of an image inside `Doc_0/Res`.
+pub fn image_file_name(id : Int32, format : ImageFormat) -> String {
+  let extension = match format {
+    Png => "png"
+    Jpeg => "jpg"
+  }
+  "Image_\{id}.\{extension}"
+}
+
+///|
+/// Path of an image inside the package.
+pub fn image_file_path(id : Int32, format : ImageFormat) -> String {
+  "Doc_0/Res/\{image_file_name(id, format)}"
+}
+
+///|
 /// Every file entry the package will contain, in write order. Directory
 /// records are added on top of these by `to_bytes`.
 pub fn Document::entry_names(doc : Document) -> Array[String] {
@@ -27,6 +43,12 @@ pub fn Document::entry_names(doc : Document) -> Array[String] {
   for font in doc.fonts {
     if font.data.length() > 0 {
       names.push(font_file_path(font.id))
+    }
+  }
+  if doc.images.length() > 0 {
+    names.push("Doc_0/DocumentRes.xml")
+    for image in doc.images {
+      names.push(image_file_path(image.id, image.format))
     }
   }
   names
@@ -62,6 +84,12 @@ pub fn Document::to_bytes(doc : Document) -> Bytes {
   if doc.fonts.length() > 0 {
     zw.add_file("Doc_0/PublicRes.xml", @utf8.encode(serialize_public_res(doc)))
   }
+  if doc.images.length() > 0 {
+    zw.add_file(
+      "Doc_0/DocumentRes.xml",
+      @utf8.encode(serialize_document_res(doc)),
+    )
+  }
   zw.add_directory("Doc_0/Pages")
   for i, page in doc.pages {
     zw.add_directory("Doc_0/Pages/Page_\{i}")
@@ -76,6 +104,13 @@ pub fn Document::to_bytes(doc : Document) -> Bytes {
       }
       zw.add_file(font_file_path(font.id), font.data)
     }
+  }
+  for image in doc.images {
+    if !res_dir_written {
+      zw.add_directory("Doc_0/Res")
+      res_dir_written = true
+    }
+    zw.add_file(image_file_path(image.id, image.format), image.data)
   }
   zw.finish()
 }

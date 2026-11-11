@@ -102,9 +102,34 @@ pub struct PathObject {
 }
 
 ///|
+/// Raster formats OFD can reference directly. The bytes are stored as-is; OFD
+/// readers decode PNG and JPEG themselves.
+pub enum ImageFormat {
+  Png
+  Jpeg
+}
+
+///|
+/// An image registered on the document and stored under `Doc_0/Res`.
+pub struct ImageResource {
+  id : Int32
+  format : ImageFormat
+  data : Bytes
+}
+
+///|
+/// Object placed on a page that paints a registered image.
+pub struct ImageObject {
+  id : Int32
+  boundary : Rect
+  resource_id : Int32
+}
+
+///|
 pub enum DrawObject {
   Text(TextObject)
   Path(PathObject)
+  Image(ImageObject)
 }
 
 ///|
@@ -136,6 +161,7 @@ pub struct Document {
   mut next_id : Int32
   /// Font used by new pages; 0 means "fall back to a named system font".
   mut primary_font : Int32
+  images : Array[ImageResource]
 }
 
 ///|
@@ -152,6 +178,7 @@ pub fn Document::new() -> Document {
     fonts: [],
     next_id: 1,
     primary_font: 0,
+    images: [],
   }
 }
 
@@ -254,6 +281,41 @@ fn Document::default_face(self : Document) -> TtfFace? {
 }
 
 ///|
+/// Identify a raster image by its magic bytes. OFD stores the original bytes,
+/// so the only thing the writer needs to know is which decoder to ask for.
+pub fn detect_image_format(data : Bytes) -> Result[ImageFormat, String] {
+  if data.length() >= 8 &&
+    data[0] == b'\x89' &&
+    data[1] == b'\x50' &&
+    data[2] == b'\x4E' &&
+    data[3] == b'\x47' {
+    return Ok(Png)
+  }
+  if data.length() >= 3 &&
+    data[0] == b'\xFF' &&
+    data[1] == b'\xD8' &&
+    data[2] == b'\xFF' {
+    return Ok(Jpeg)
+  }
+  Err("unsupported image: expected PNG or JPEG magic bytes")
+}
+
+///|
+/// Register an image and return the resource id used by `Page::image`.
+pub fn Document::add_image(
+  self : Document,
+  data : Bytes,
+) -> Result[Int32, String] {
+  let format = match detect_image_format(data) {
+    Err(message) => return Err(message)
+    Ok(format) => format
+  }
+  let id = self.alloc_id()
+  self.images.push({ id, format, data, })
+  Ok(id)
+}
+
+///|
 /// Font id that new pages will use. Zero means the document has no embedded
 /// font, and pages fall back to a named system font.
 pub fn Document::primary_font_id(self : Document) -> Int32 {
@@ -316,6 +378,7 @@ fn object_id(obj : DrawObject) -> Int32 {
   match obj {
     Text(t) => t.id
     Path(p) => p.id
+    Image(i) => i.id
   }
 }
 

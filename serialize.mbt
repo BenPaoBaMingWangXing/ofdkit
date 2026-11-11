@@ -83,6 +83,9 @@ pub fn serialize_document(doc : Document) -> String {
   if doc.fonts.length() > 0 {
     xml.leaf("ofd:PublicRes", [], "PublicRes.xml")
   }
+  if doc.images.length() > 0 {
+    xml.leaf("ofd:DocumentRes", [], "DocumentRes.xml")
+  }
   xml.leaf("ofd:MaxUnitID", [], doc.max_unit_id().to_string())
   xml.close("ofd:CommonData")
   xml.open("ofd:Pages", [])
@@ -166,6 +169,41 @@ fn serialize_path_object(xml : Xml, obj : PathObject) -> Unit {
 }
 
 ///|
+fn serialize_image_object(xml : Xml, obj : ImageObject) -> Unit {
+  // CTM maps the unit square onto the boundary, so the image fills it exactly.
+  let ctm = "\{fmt_mm(obj.boundary.width)} 0 0 \{fmt_mm(obj.boundary.height)} 0 0"
+  xml.empty("ofd:ImageObject", [
+    ("ID", obj.id.to_string()),
+    ("Boundary", rect_attr(obj.boundary)),
+    ("ResourceID", obj.resource_id.to_string()),
+    ("CTM", ctm),
+  ])
+}
+
+///|
+/// Serialise `DocumentRes.xml`, the document-level resource dictionary.
+pub fn serialize_document_res(doc : Document) -> String {
+  let xml = Xml::new()
+  xml.declaration()
+  xml.open("ofd:DocumentRes", [("xmlns:ofd", OFD_NS), ("BaseLoc", "Res")])
+  if doc.images.length() > 0 {
+    xml.open("ofd:MultiMedia", [])
+    for image in doc.images {
+      let subtype = match image.format {
+        Png => "PNG"
+        Jpeg => "JPEG"
+      }
+      xml.open("ofd:Image", [("ID", image.id.to_string()), ("Subtype", subtype)])
+      xml.leaf("ofd:ImageFile", [], image_file_name(image.id, image.format))
+      xml.close("ofd:Image")
+    }
+    xml.close("ofd:MultiMedia")
+  }
+  xml.close("ofd:DocumentRes")
+  xml.to_string()
+}
+
+///|
 /// Serialise one page's `Content.xml`.
 pub fn serialize_content(page : Page) -> String {
   let xml = Xml::new()
@@ -179,6 +217,7 @@ pub fn serialize_content(page : Page) -> String {
     match obj {
       Text(t) => serialize_text_object(xml, t)
       Path(p) => serialize_path_object(xml, p)
+      Image(i) => serialize_image_object(xml, i)
     }
   }
   xml.close("ofd:Layer")

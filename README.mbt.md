@@ -16,6 +16,7 @@ OFD（Open Fixed-layout Document，开放式版式文档）是国家标准 **GB/
 - 图形对象：直线、矩形、填充矩形、自定义路径（`M` / `L` / `C` / `Q` / `B` 指令）
 - **TrueType 字体嵌入与子集化**：给一个字库文件和使用到的文本，ofdkit 只保留需要的中文字形，把 9.7 MB 的黑体压到 130 KB 级别
 - **基于真实字形的文本度量与自动换行**：有嵌入字体时按字体的 advance width 排版，宽度与 FreeType 逐位一致
+- **图片对象**：PNG / JPEG 原样打包进 `DocumentRes.xml`，按毫米框定位（印章、logo 这类）
 - 文档元数据：标题、作者、主题、关键词、创建日期
 - 结构自校验：`ofdkit verify` 会重新解析生成的包，逐项检查必需文件、引用、对象 ID 上限，以及嵌入字体是不是真的字体
 
@@ -25,7 +26,6 @@ OFD（Open Fixed-layout Document，开放式版式文档）是国家标准 **GB/
 
 - **不读取、不渲染 OFD**。这是生成侧工具，没有版面解析和栅格化能力。
 - **不支持签章**。GB/T 38540 的电子签章（`Signatures.xml` / `Seal.esl` / `SignedValue.dat`）尚未实现。
-- **不支持图片对象**（`ImageObject`）。
 - **不支持两端对齐、字间距、英文断词回退**。换行按字符宽度累加，英文单词只在整词超宽时才被拆开，不会回溯到上一个空格断行。
 - **ZIP 只写 store 模式**（不压缩）。包体积因此偏大，但结构完全合法且可复现。
 - **字体子集不做字形重编号**。保留原 glyph id、把未用字形清空，所以 `hmtx` 和 `loca` 仍按原字形总数分配（这是子集仍有 100 KB 量级的原因）。真正的重编号能把体积再压一个数量级，但会牵动 `cmap`、复合字形组件索引和 `hmtx` 三处，风险与收益暂不划算。
@@ -95,8 +95,11 @@ moon run cmd/main -- font-info C:/Windows/Fonts/simhei.ttf
   通过  PublicRes resolves  (Doc_0/PublicRes.xml)
   通过  declared font files are packaged  (1 font file(s))
   通过  embedded fonts are readable  (Font_1.ttf: 28562 glyphs)
+  通过  DocumentRes resolves  (Doc_0/DocumentRes.xml)
+  通过  declared images are packaged  (1 image(s))
+  通过  images are PNG or JPEG  (1 image(s))
 
-12/12 checks passed
+15/15 checks passed
 ```
 
 ## 包结构
@@ -191,12 +194,11 @@ let next_y = page.paragraph(
 moon test
 ```
 
-39 个测试，覆盖 CRC-32 标准向量、ZIP 结构、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径、文本度量与换行，以及若干负例（截断归档、缺页面流、字体文件不是字体）。
+46 个测试，覆盖 CRC-32 标准向量、ZIP 结构、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径、文本度量与换行、图片格式嗅探，以及若干负例（截断归档、缺页面流、字体文件不是字体、图片魔数不对）。
 
 ## 路线图
 
 - [ ] 字形重编号式完整子集（体积再降一个数量级）
-- [ ] 图片对象（PNG / JPEG）
 - [ ] 两端对齐与字间距
 - [ ] 文档大纲（`Outlines`）
 - [ ] GB/T 38540 电子签章
