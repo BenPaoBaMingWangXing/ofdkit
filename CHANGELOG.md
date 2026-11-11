@@ -3,6 +3,11 @@
 All notable changes to ofdkit are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.8.1
+
+- Documentation only: correct the per-module line counts in the proposal so the
+  published package matches the repository.
+
 ## 0.8.0
 
 Closes every limitation the 0.7.0 proposal listed.
