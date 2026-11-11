@@ -123,44 +123,6 @@ fn close_over_components(face : TtfFace, glyphs : Array[Int32]) -> Array[Int32] 
 }
 
 ///|
-/// Build a `glyf` table containing only `keep` glyphs, plus the matching `loca`.
-/// `loca` uses the short format when the glyph data fits in 16-bit doubled
-/// offsets, which halves that table — it is sized by glyph count, not by how
-/// many glyphs we kept. Returns `(glyf, loca, used_short_format)`.
-fn build_glyf_loca(face : TtfFace, keep : Array[Int32]) -> (Bytes, Bytes, Bool) {
-  let num_glyphs = face.num_glyphs()
-  let glyf = ByteBuf::new()
-  let offsets : Array[Int32] = []
-  for id in 0..<num_glyphs {
-    offsets.push(glyf.length())
-    if keep.contains(id) {
-      match face.glyph_range(id) {
-        None => ()
-        Some((start, length)) => {
-          // Glyph data must stay 4-byte aligned inside glyf.
-          while glyf.length() % 4 != 0 {
-            glyf.write_byte(b'\x00')
-          }
-          offsets[offsets.length() - 1] = glyf.length()
-          glyf.write_bytes(slice_of(face.data, start, length))
-        }
-      }
-    }
-  }
-  offsets.push(glyf.length())
-  let short_format = glyf.length() <= 131070
-  let loca = ByteBuf::new()
-  for offset in offsets {
-    if short_format {
-      loca.write_u16_be((offset / 2).reinterpret_as_uint())
-    } else {
-      loca.write_u32_be(offset.reinterpret_as_uint())
-    }
-  }
-  (glyf.to_bytes(), loca.to_bytes(), short_format)
-}
-
-///|
 /// Copy a table verbatim from the source font.
 fn copy_table(face : TtfFace, tag : String) -> OutTable? {
   match face.table(tag) {
@@ -171,14 +133,6 @@ fn copy_table(face : TtfFace, tag : String) -> OutTable? {
     }
   }
 }
-
-///|
-/// Tables copied unchanged into the subset. Hinting programs (`cvt`, `fpgm`,
-/// `prep`) and the vertical metrics are dropped: the subset is meant for
-/// printed layout, where those add weight without helping.
-let copied_tables : Array[String] = [
-  "head", "hhea", "hmtx", "maxp", "cmap", "name", "post", "OS/2", "gasp",
-]
 
 ///|
 /// Rewrite `head` so `indexToLocFormat` matches the `loca` we emit, then zero
@@ -262,37 +216,5 @@ pub fn subset_font(
   face : TtfFace,
   code_points : Array[Int32],
 ) -> Result[Bytes, String] {
-  if face.num_glyphs() == 0 {
-    return Err("font has no glyphs (missing maxp table)")
-  }
-  let wanted : Array[Int32] = [0]
-  for code in code_points {
-    let glyph = face.glyph_for_char(code)
-    if glyph != 0 && !wanted.contains(glyph) {
-      wanted.push(glyph)
-    }
-  }
-  let keep = close_over_components(face, wanted)
-  let (glyf, loca, short_format) = build_glyf_loca(face, keep)
-  let out : Array[OutTable] = []
-  let head = match head_with_loca_format(face, !short_format) {
-    None => return Err("font has no usable head table")
-    Some(data) => data
-  }
-  out.push({ tag: "head", data: head, checksum: table_checksum(head), })
-  for tag in copied_tables {
-    if tag == "head" {
-      continue
-    }
-    match copy_table(face, tag) {
-      None => ()
-      Some(table) => out.push(table)
-    }
-  }
-  out.push({ tag: "loca", data: loca, checksum: table_checksum(loca), })
-  out.push({ tag: "glyf", data: glyf, checksum: table_checksum(glyf), })
-  if out.length() > 4095 {
-    return Err("too many tables")
-  }
-  Ok(assemble_sfnt(out))
+  subset_font_renumbered(face, code_points)
 }
