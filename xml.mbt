@@ -8,12 +8,12 @@
 ///|
 pub struct Xml {
   sb : StringBuilder
-  mut depth : Int
+  mut depth : Int32
 }
 
 ///|
 pub fn Xml::new() -> Xml {
-  { sb: StringBuilder(), depth: 0 }
+  { sb: StringBuilder(), depth: 0, }
 }
 
 ///|

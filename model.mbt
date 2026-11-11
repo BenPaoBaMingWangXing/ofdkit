@@ -8,24 +8,24 @@
 ///|
 /// Device RGB colour, components in 0..255.
 pub struct Color {
-  r : Int
-  g : Int
-  b : Int
+  r : Int32
+  g : Int32
+  b : Int32
 }
 
 ///|
-pub fn Color::new(r : Int, g : Int, b : Int) -> Color {
-  { r, g, b }
+pub fn Color::new(r : Int32, g : Int32, b : Int32) -> Color {
+  { r, g, b, }
 }
 
 ///|
 pub fn Color::black() -> Color {
-  { r: 0, g: 0, b: 0 }
+  { r: 0, g: 0, b: 0, }
 }
 
 ///|
 pub fn Color::white() -> Color {
-  { r: 255, g: 255, b: 255 }
+  { r: 255, g: 255, b: 255, }
 }
 
 ///|
@@ -46,14 +46,19 @@ pub struct Rect {
 }
 
 ///|
-pub fn Rect::new(x : Double, y : Double, width : Double, height : Double) -> Rect {
-  { x, y, width, height }
+pub fn Rect::new(
+  x : Double,
+  y : Double,
+  width : Double,
+  height : Double,
+) -> Rect {
+  { x, y, width, height, }
 }
 
 ///|
 /// A font resource declared in `PublicRes.xml`.
 pub struct Font {
-  id : Int
+  id : Int32
   name : String
   family : String
   /// Embedded TrueType bytes, or empty when the font is left to the reader.
@@ -61,20 +66,20 @@ pub struct Font {
 }
 
 ///|
-pub fn Font::named(id : Int, name : String) -> Font {
-  { id, name, family: name, data: Bytes::new(0) }
+pub fn Font::named(id : Int32, name : String) -> Font {
+  { id, name, family: name, data: Bytes::new(0), }
 }
 
 ///|
-pub fn Font::embedded(id : Int, name : String, data : Bytes) -> Font {
-  { id, name, family: name, data }
+pub fn Font::embedded(id : Int32, name : String, data : Bytes) -> Font {
+  { id, name, family: name, data, }
 }
 
 ///|
 pub struct TextObject {
-  id : Int
+  id : Int32
   boundary : Rect
-  font_id : Int
+  font_id : Int32
   size : Double
   color : Color
   text : String
@@ -85,7 +90,7 @@ pub struct TextObject {
 
 ///|
 pub struct PathObject {
-  id : Int
+  id : Int32
   boundary : Rect
   line_width : Double
   stroke : Bool
@@ -97,29 +102,21 @@ pub struct PathObject {
 }
 
 ///|
-pub struct ImageObject {
-  id : Int
-  boundary : Rect
-  resource_id : Int
-}
-
-///|
 pub enum DrawObject {
   Text(TextObject)
   Path(PathObject)
-  Image(ImageObject)
 }
 
 ///|
 pub struct Page {
-  id : Int
+  id : Int32
   width : Double
   height : Double
   objects : Array[DrawObject]
   /// Ids are handed out in blocks so pages never collide.
-  mut next_id : Int
+  mut next_id : Int32
   /// Font used by `text` when no explicit font is given.
-  default_font : Int
+  default_font : Int32
 }
 
 ///|
@@ -133,7 +130,7 @@ pub struct Document {
   mut creation_date : String
   pages : Array[Page]
   fonts : Array[Font]
-  mut next_id : Int
+  mut next_id : Int32
 }
 
 ///|
@@ -183,17 +180,14 @@ pub fn Document::set_doc_id(self : Document, doc_id : String) -> Document {
 }
 
 ///|
-pub fn Document::set_creation_date(
-  self : Document,
-  date : String,
-) -> Document {
+pub fn Document::set_creation_date(self : Document, date : String) -> Document {
   self.creation_date = date
   self
 }
 
 ///|
 /// Allocate a document-unique object id.
-pub fn Document::alloc_id(self : Document) -> Int {
+pub fn Document::alloc_id(self : Document) -> Int32 {
   let id = self.next_id
   self.next_id = self.next_id + 1
   id
@@ -203,14 +197,14 @@ pub fn Document::alloc_id(self : Document) -> Int {
 /// Register a font and return its resource id. Calling this twice with the same
 /// name returns the same id, so repeated text calls do not bloat the resource
 /// table.
-pub fn Document::add_font(self : Document, name : String) -> Int {
+pub fn Document::add_font(self : Document, name : String) -> Int32 {
   for font in self.fonts {
     if font.name == name {
       return font.id
     }
   }
   let id = self.alloc_id()
-  self.fonts.push({ id, name, family: name, data: Bytes::new(0) })
+  self.fonts.push({ id, name, family: name, data: Bytes::new(0), })
   id
 }
 
@@ -221,14 +215,14 @@ pub fn Document::add_embedded_font(
   self : Document,
   name : String,
   data : Bytes,
-) -> Int {
+) -> Int32 {
   for font in self.fonts {
     if font.name == name {
       return font.id
     }
   }
   let id = self.alloc_id()
-  self.fonts.push({ id, name, family: name, data })
+  self.fonts.push({ id, name, family: name, data, })
   id
 }
 
@@ -269,16 +263,15 @@ pub fn Document::add_page_sized(
 }
 
 ///|
-pub fn Document::page_count(self : Document) -> Int {
+pub fn Document::page_count(self : Document) -> Int32 {
   self.pages.length()
 }
 
 ///|
-fn object_id(obj : DrawObject) -> Int {
+fn object_id(obj : DrawObject) -> Int32 {
   match obj {
     Text(t) => t.id
     Path(p) => p.id
-    Image(i) => i.id
   }
 }
 
@@ -286,7 +279,7 @@ fn object_id(obj : DrawObject) -> Int {
 /// Largest object id in the document, which is what `MaxUnitID` must report.
 /// Page objects are numbered in blocks, so this is not simply the document
 /// counter.
-pub fn Document::max_unit_id(self : Document) -> Int {
+pub fn Document::max_unit_id(self : Document) -> Int32 {
   let mut max = self.next_id
   for page in self.pages {
     for obj in page.objects {

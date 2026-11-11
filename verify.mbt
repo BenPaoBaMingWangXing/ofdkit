@@ -25,7 +25,7 @@ fn VerifyReport::add(
   passed : Bool,
   detail : String,
 ) -> Unit {
-  self.checks.push({ name, passed, detail })
+  self.checks.push({ name, passed, detail, })
 }
 
 ///|
@@ -65,10 +65,10 @@ fn tag_inner(xml : String, tag : String) -> String? {
     None => None
     Some(start_pos) => {
       let start = start_pos + open.length()
-      let rest = xml.substring(start=start)
+      let rest = xml[start:]
       match rest.find(close) {
         None => None
-        Some(end_pos) => Some(rest.substring(end=end_pos))
+        Some(end_pos) => Some(rest[:end_pos].to_owned())
       }
     }
   }
@@ -86,13 +86,13 @@ fn find_all_attr(xml : String, attr : String) -> Array[String] {
       None => keep_going = false
       Some(pos) => {
         let start = pos + needle.length()
-        let tail = rest.substring(start=start)
+        let tail = rest[start:]
         match tail.find("\"") {
           None => keep_going = false
           Some(end_pos) => {
-            values.push(tail.substring(end=end_pos))
+            values.push(tail[:end_pos].to_owned())
             let consumed = start + end_pos + 1
-            rest = rest.substring(start=consumed)
+            rest = rest[consumed:].to_owned()
           }
         }
       }
@@ -104,7 +104,7 @@ fn find_all_attr(xml : String, attr : String) -> Array[String] {
 ///|
 /// Verify an OFD package held in memory.
 pub fn verify_ofd(data : Bytes) -> VerifyReport {
-  let report = { checks: [] }
+  let report = { checks: [], }
   match parse_zip(data) {
     Err(message) => {
       report.add("zip container parses", false, message)
@@ -160,11 +160,7 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
       if base_locs.length() == 0 {
         report.add("document has pages", false, "no BaseLoc entries")
       } else {
-        report.add(
-          "document has pages",
-          true,
-          "\{base_locs.length()} page(s)",
-        )
+        report.add("document has pages", true, "\{base_locs.length()} page(s)")
         let doc_dir = parent_dir(doc_root)
         let mut all_present = true
         let mut first_missing = ""
@@ -178,9 +174,7 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
           }
         }
         report.add(
-          "every page content stream exists",
-          all_present,
-          first_missing,
+          "every page content stream exists", all_present, first_missing,
         )
       }
       // Shared resources.

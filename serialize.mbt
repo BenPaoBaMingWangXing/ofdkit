@@ -37,7 +37,11 @@ fn box_attr(width : Double, height : Double) -> String {
 pub fn serialize_ofd_xml(doc : Document) -> String {
   let xml = Xml::new()
   xml.declaration()
-  xml.open("ofd:OFD", [("xmlns:ofd", OFD_NS), ("DocType", "OFD"), ("Version", "1.1")])
+  xml.open("ofd:OFD", [
+    ("xmlns:ofd", OFD_NS),
+    ("DocType", "OFD"),
+    ("Version", "1.1"),
+  ])
   xml.open("ofd:DocBody", [])
   xml.open("ofd:DocInfo", [])
   xml.leaf("ofd:DocID", [], doc.doc_id)
@@ -129,10 +133,11 @@ fn serialize_text_object(xml : Xml, obj : TextObject) -> Unit {
     ("Fill", "true"),
   ])
   xml.empty("ofd:FillColor", [("Value", obj.color.to_value_string())])
-  xml.leaf("ofd:TextCode", [
-    ("X", fmt_mm(obj.offset_x)),
-    ("Y", fmt_mm(obj.offset_y)),
-  ], obj.text)
+  xml.leaf(
+    "ofd:TextCode",
+    [("X", fmt_mm(obj.offset_x)), ("Y", fmt_mm(obj.offset_y))],
+    obj.text,
+  )
   xml.close("ofd:TextObject")
 }
 
@@ -172,7 +177,6 @@ pub fn serialize_content(page : Page) -> String {
     match obj {
       Text(t) => serialize_text_object(xml, t)
       Path(p) => serialize_path_object(xml, p)
-      Image(_) => ()
     }
   }
   xml.close("ofd:Layer")

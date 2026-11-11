@@ -8,11 +8,11 @@
 ///|
 pub struct ZipEntryInfo {
   name : String
-  method : UInt
-  crc : UInt
-  compressed_size : Int
-  uncompressed_size : Int
-  local_offset : Int
+  compression : UInt32
+  crc : UInt32
+  compressed_size : Int32
+  uncompressed_size : Int32
+  local_offset : Int32
 }
 
 ///|
@@ -22,12 +22,12 @@ pub struct ZipArchive {
 }
 
 ///|
-fn read_u16(data : Bytes, offset : Int) -> UInt {
+fn read_u16(data : Bytes, offset : Int32) -> UInt32 {
   data[offset].to_uint() | (data[offset + 1].to_uint() << 8)
 }
 
 ///|
-fn read_u32(data : Bytes, offset : Int) -> UInt {
+fn read_u32(data : Bytes, offset : Int32) -> UInt32 {
   data[offset].to_uint() |
   (data[offset + 1].to_uint() << 8) |
   (data[offset + 2].to_uint() << 16) |
@@ -36,7 +36,7 @@ fn read_u32(data : Bytes, offset : Int) -> UInt {
 
 ///|
 /// Locate the end-of-central-directory record by scanning backwards.
-fn find_eocd(data : Bytes) -> Int {
+fn find_eocd(data : Bytes) -> Int32 {
   let len = data.length()
   if len < 22 {
     return -1
@@ -74,7 +74,7 @@ pub fn parse_zip(data : Bytes) -> Result[ZipArchive, String] {
     if read_u32(data, cursor) != 0x02014B50U {
       return Err("corrupt zip: bad central directory signature")
     }
-    let method = read_u16(data, cursor + 10)
+    let compression = read_u16(data, cursor + 10)
     let crc = read_u32(data, cursor + 16)
     let compressed_size = read_u32(data, cursor + 20).reinterpret_as_int()
     let uncompressed_size = read_u32(data, cursor + 24).reinterpret_as_int()
@@ -86,7 +86,7 @@ pub fn parse_zip(data : Bytes) -> Result[ZipArchive, String] {
     let name = utf8_decode_bytes(data, name_start, name_len)
     entries.push({
       name,
-      method,
+      compression,
       crc,
       compressed_size,
       uncompressed_size,
@@ -94,12 +94,12 @@ pub fn parse_zip(data : Bytes) -> Result[ZipArchive, String] {
     })
     cursor = name_start + name_len + extra_len + comment_len
   }
-  Ok({ entries, data })
+  Ok({ entries, data, })
 }
 
 ///|
 /// Copy a slice of `data` into a fresh `Bytes`.
-fn slice_bytes(data : Bytes, start : Int, length : Int) -> Bytes {
+fn slice_bytes(data : Bytes, start : Int32, length : Int32) -> Bytes {
   let tmp = FixedArray::make(length, b'\x00')
   for i in 0..<length {
     tmp[i] = data[start + i]
@@ -110,7 +110,7 @@ fn slice_bytes(data : Bytes, start : Int, length : Int) -> Bytes {
 ///|
 /// Decode a UTF-8 slice into a string. Zip entry names in an OFD package are
 /// ASCII paths, so lossy decoding is safe here and avoids a raise site.
-fn utf8_decode_bytes(data : Bytes, start : Int, length : Int) -> String {
+fn utf8_decode_bytes(data : Bytes, start : Int32, length : Int32) -> String {
   @utf8.decode_lossy(slice_bytes(data, start, length))
 }
 
@@ -141,12 +141,17 @@ pub fn ZipArchive::entry(self : ZipArchive, name : String) -> ZipEntryInfo? {
 
 ///|
 /// Read an entry's bytes. Only stored entries are supported.
-pub fn ZipArchive::read(self : ZipArchive, name : String) -> Result[Bytes, String] {
+pub fn ZipArchive::read(
+  self : ZipArchive,
+  name : String,
+) -> Result[Bytes, String] {
   match self.entry(name) {
     None => Err("missing entry: \{name}")
     Some(entry) => {
-      if entry.method != 0U {
-        return Err("entry \{name} is compressed; only stored entries are readable")
+      if entry.compression != 0U {
+        return Err(
+          "entry \{name} is compressed; only stored entries are readable",
+        )
       }
       let header_at = entry.local_offset
       if header_at + 30 > self.data.length() {
