@@ -2,6 +2,10 @@
 package "BenPaoBaMingWangXing/ofdkit"
 
 // Values
+pub const TABLE_PAGE_BOTTOM : Double = 20.0
+
+pub const TABLE_PAGE_TOP : Double = 20.0
+
 pub fn code_points_of(String) -> Array[Int32]
 
 pub fn crc32(Bytes) -> UInt32
@@ -41,6 +45,8 @@ pub fn serialize_ofd_xml(Document) -> String
 pub fn serialize_public_res(Document) -> String
 
 pub fn subset_font(TtfFace, Array[Int32]) -> Result[Bytes, String]
+
+pub fn subset_font_renumbered(TtfFace, Array[Int32]) -> Result[Bytes, String]
 
 pub fn verify_ofd(Bytes) -> VerifyReport
 
@@ -128,6 +134,7 @@ pub fn Document::set_doc_id(Self, String) -> Self
 pub fn Document::set_keywords(Self, String) -> Self
 pub fn Document::set_subject(Self, String) -> Self
 pub fn Document::set_title(Self, String) -> Self
+pub fn Document::table_across_pages(Self, Page, TableStyle, Array[Array[String]]) -> (Page, Double)
 pub fn Document::to_bytes(Self) -> Bytes
 
 pub enum DrawObject {

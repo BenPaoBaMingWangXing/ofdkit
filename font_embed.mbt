@@ -31,7 +31,7 @@ pub fn Document::embed_font_for_text(
     Err(message) => return Err(message)
     Ok(face) => face
   }
-  let subset = match subset_font(face, code_points_of(text)) {
+  let subset = match subset_font_renumbered(face, code_points_of(text)) {
     Err(message) => return Err(message)
     Ok(bytes) => bytes
   }

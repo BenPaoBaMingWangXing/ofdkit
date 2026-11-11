@@ -122,3 +122,71 @@ test "table style builders keep the rest of the settings" {
   assert_eq(style.width(), 30.0)
   assert_true(style.header)
 }
+
+///|
+/// Build a table with a header row plus `n` body rows.
+fn long_rows(n : Int32) -> Array[Array[String]] {
+  let rows : Array[Array[String]] = [["序号", "内容"]]
+  for i in 0..<n {
+    rows.push(["行\{i}", "内容\{i}"])
+  }
+  rows
+}
+
+///|
+test "a short table stays on one page" {
+  let doc = @ofdkit.Document::new()
+  let page = doc.add_page()
+  let style = @ofdkit.TableStyle::new(20.0, 20.0, [40.0, 100.0])
+  ignore(doc.table_across_pages(page, style, long_rows(5)))
+  assert_eq(doc.page_count(), 1)
+}
+
+///|
+test "a long table spills onto more pages" {
+  let doc = @ofdkit.Document::new()
+  let page = doc.add_page()
+  let style = @ofdkit.TableStyle::new(20.0, 20.0, [40.0, 100.0])
+  // A4 is 297 mm tall; with 20 mm margins and 6.5 mm rows each page holds 38
+  // body rows plus the header, so 45 rows needs two pages.
+  ignore(doc.table_across_pages(page, style, long_rows(45)))
+  assert_eq(doc.page_count(), 2)
+}
+
+///|
+test "continuation pages repeat the header row" {
+  let doc = @ofdkit.Document::new()
+  let page = doc.add_page()
+  let style = @ofdkit.TableStyle::new(20.0, 20.0, [40.0, 100.0])
+  let (last, _) = doc.table_across_pages(page, style, long_rows(45))
+  // The second page must contain the header text again.
+  let mut header_on_last_page = false
+  for obj in last.objects {
+    match obj {
+      @ofdkit.Text(t) => if t.text == "序号" { header_on_last_page = true }
+      _ => ()
+    }
+  }
+  assert_true(header_on_last_page)
+}
+
+///|
+test "a table that exactly fills a page does not add a blank one" {
+  let doc = @ofdkit.Document::new()
+  let page = doc.add_page()
+  let style = @ofdkit.TableStyle::new(20.0, 20.0, [40.0, 100.0])
+  // 38 body rows is exactly one page worth.
+  ignore(doc.table_across_pages(page, style, long_rows(38)))
+  assert_eq(doc.page_count(), 1)
+}
+
+///|
+test "an empty table leaves the cursor where it was" {
+  let doc = @ofdkit.Document::new()
+  let page = doc.add_page()
+  let style = @ofdkit.TableStyle::new(20.0, 33.0, [40.0])
+  let rows : Array[Array[String]] = []
+  let (_, y) = doc.table_across_pages(page, style, rows)
+  assert_eq(y, 33.0)
+  assert_eq(doc.page_count(), 1)
+}

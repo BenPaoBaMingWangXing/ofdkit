@@ -207,3 +207,63 @@ pub fn Page::fit_text(
   out.write_stringview(ellipsis)
   out.to_string()
 }
+
+///|
+/// Top margin used when a table spills onto a new page.
+pub const TABLE_PAGE_TOP : Double = 20.0
+
+///|
+/// Bottom margin a table must leave free on a page.
+pub const TABLE_PAGE_BOTTOM : Double = 20.0
+
+///|
+/// Draw `rows` starting at `(style.x, style.y)` on `page`, adding pages as
+/// needed. The header row is repeated at the top of every continuation page,
+/// which is what makes a long table readable.
+///
+/// Returns the page the table ended on and the y coordinate below its last row.
+pub fn Document::table_across_pages(
+  self : Document,
+  page : Page,
+  style : TableStyle,
+  rows : Array[Array[String]],
+) -> (Page, Double) {
+  if rows.length() == 0 {
+    return (page, style.y)
+  }
+  let has_header = style.header
+  let header_rows = if has_header { 1 } else { 0 }
+  let body_start = header_rows
+  let mut current = page
+  let mut cursor = style.y
+  let mut index = body_start
+  while index < rows.length() {
+    // Every page carries the header, so body capacity is one row less.
+    let available = current.height - TABLE_PAGE_BOTTOM - cursor
+    let capacity = (available / style.row_height).to_int()
+    let usable = if has_header { capacity - 1 } else { capacity }
+    if usable < 1 {
+      // Not even one body row fits; continue on a fresh page.
+      current = self.add_page_sized(current.width, current.height)
+      cursor = TABLE_PAGE_TOP
+      continue
+    }
+    let remaining = rows.length() - index
+    let take = if usable > remaining { remaining } else { usable }
+    let block : Array[Array[String]] = []
+    if has_header {
+      block.push(rows[0])
+    }
+    for i in 0..<take {
+      block.push(rows[index + i])
+    }
+    let block_style = { ..style, y: cursor, }
+    cursor = current.table(block_style, block)
+    index = index + take
+    if index < rows.length() {
+      current = self.add_page_sized(current.width, current.height)
+      cursor = TABLE_PAGE_TOP
+    }
+  }
+  (current, cursor)
+}

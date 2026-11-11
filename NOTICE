@@ -1,0 +1,42 @@
+ofdkit
+Copyright 2026 BenPaoBaMingWangXing
+
+This product is licensed under the Apache License, Version 2.0.
+See the LICENSE file for the full text.
+
+---
+
+Third-party notices
+
+1. moonbitlang/x
+   License: Apache-2.0
+   https://github.com/moonbitlang/x
+   Used as a runtime dependency by the command line tool for filesystem access
+   (reading a font file, writing the generated package). The library package
+   itself does not depend on it.
+
+2. ofdrw / OFD Reader & Writer
+   License: MIT
+   https://github.com/ofdrw/ofdrw
+   Used during development only, as a reference for the package layout that
+   real OFD readers expect. One of its test fixtures (helloworld.ofd) was
+   unzipped and compared against ofdkit's output; that comparison is what
+   surfaced the missing directory records and the CommonData element order.
+   No code was copied from this project, and no part of it is distributed here.
+
+3. TrueType fonts used during development
+   Development-time testing rendered subsets of SimHei (simhei.ttf) installed on
+   the developer machine. Font files are not distributed with this repository.
+   SimHei and any other system font remain the property of their respective
+   rights holders.
+
+---
+
+Originality statement
+
+All MoonBit source in this repository was written for this project. The OFD
+package structure follows GB/T 33190-2016, which is a published national
+standard; the implementation of ZIP writing, XML emission, CRC-32, TrueType
+parsing and subsetting is original work. Algorithmic knowledge (CRC-32
+polynomial, TrueType table layout, cmap format 4 encoding) comes from the公开
+specifications of those formats, not from any single codebase.
