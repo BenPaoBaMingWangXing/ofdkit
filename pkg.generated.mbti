@@ -18,6 +18,8 @@ pub fn font_glyph_count(Bytes) -> Result[Int32, String]
 
 pub fn page_content_path(Int32) -> String
 
+pub fn parse_double(String) -> Double?
+
 pub fn parse_ttf(Bytes) -> Result[TtfFace, String]
 
 pub fn parse_zip(Bytes) -> Result[ZipArchive, String]
@@ -130,12 +132,15 @@ pub struct Page {
   objects : Array[DrawObject]
   mut next_id : Int32
   default_font : Int32
+  font_face : TtfFace?
 }
 pub fn Page::fill_rect(Self, Double, Double, Double, Double, Color) -> Unit
 pub fn Page::fill_rect_object(Self, Double, Double, Double, Double, Color) -> PathObject
 pub fn Page::line(Self, Double, Double, Double, Double, Double) -> Unit
 pub fn Page::line_object(Self, Double, Double, Double, Double, Double) -> PathObject
+pub fn Page::measure_text(Self, String, Double) -> Double
 pub fn Page::object_count(Self) -> Int32
+pub fn Page::paragraph(Self, Double, Double, Double, Double, Double, String) -> Double
 pub fn Page::path(Self, Double, Double, Double, Double, String, Double) -> Unit
 pub fn Page::path_object(Self, Double, Double, Double, Double, String, Double) -> PathObject
 pub fn Page::rect(Self, Double, Double, Double, Double, Double) -> Unit
@@ -143,6 +148,7 @@ pub fn Page::rect_object(Self, Double, Double, Double, Double, Double) -> PathOb
 pub fn Page::text(Self, Double, Double, Double, String) -> Unit
 pub fn Page::text_object(Self, Double, Double, Double, String) -> TextObject
 pub fn Page::text_with_font(Self, Double, Double, Double, Int32, String) -> TextObject
+pub fn Page::wrap_text(Self, String, Double, Double) -> Array[String]
 
 pub struct PathObject {
   id : Int32

@@ -30,6 +30,105 @@ pub fn estimate_text_width(text : String, size : Double) -> Double {
 }
 
 ///|
+/// Advance width of a single character, in millimetres.
+fn Page::char_width(self : Page, ch : Char, size : Double) -> Double {
+  match self.font_face {
+    None => estimate_text_width(ch.to_string(), size)
+    Some(face) => {
+      let upem = face.units_per_em()
+      if upem <= 0 {
+        return estimate_text_width(ch.to_string(), size)
+      }
+      let glyph = face.glyph_for_char(ch.to_uint().reinterpret_as_int())
+      face.advance_width(glyph).to_double() / upem.to_double() * size
+    }
+  }
+}
+
+///|
+/// Width of `text` at `size` millimetres. Uses the embedded font's own advance
+/// widths when one is present, and falls back to the ASCII/CJK estimate when it
+/// is not.
+pub fn Page::measure_text(self : Page, text : String, size : Double) -> Double {
+  match self.font_face {
+    None => estimate_text_width(text, size)
+    Some(face) => {
+      let upem = face.units_per_em()
+      if upem <= 0 {
+        return estimate_text_width(text, size)
+      }
+      let mut units = 0
+      for ch in text {
+        let glyph = face.glyph_for_char(ch.to_uint().reinterpret_as_int())
+        units = units + face.advance_width(glyph)
+      }
+      units.to_double() / upem.to_double() * size
+    }
+  }
+}
+
+///|
+/// Break `text` into lines that fit `width` millimetres. Honours explicit
+/// newlines, never starts a line with a space, and does not split an ASCII word
+/// unless the word alone is wider than the line.
+pub fn Page::wrap_text(
+  self : Page,
+  text : String,
+  width : Double,
+  size : Double,
+) -> Array[String] {
+  let lines : Array[String] = []
+  let current = StringBuilder()
+  let mut current_width = 0.0
+  for ch in text {
+    if ch == '\n' {
+      lines.push(current.to_string())
+      current.reset()
+      current_width = 0.0
+      continue
+    }
+    let advance = self.char_width(ch, size)
+    if current_width + advance > width && !current.is_empty() {
+      // Break here. If the character would have followed a space, the space
+      // stays at the end of the previous line and we do not indent the next.
+      lines.push(current.to_string())
+      current.reset()
+      current_width = 0.0
+      if ch == ' ' {
+        continue
+      }
+    }
+    current.write_char(ch)
+    current_width = current_width + advance
+  }
+  if !current.is_empty() {
+    lines.push(current.to_string())
+  }
+  lines
+}
+
+///|
+/// Draw wrapped text starting at `(x, y)`, one line per `line_height`
+/// millimetres. Returns the y coordinate below the last line.
+pub fn Page::paragraph(
+  self : Page,
+  x : Double,
+  y : Double,
+  width : Double,
+  size : Double,
+  line_height : Double,
+  text : String,
+) -> Double {
+  let lines = self.wrap_text(text, width, size)
+  let mut cursor = y
+  for line in lines {
+    self.text(x, cursor, size, line)
+    cursor = cursor + line_height
+  }
+  cursor
+}
+
+///|
 /// Draw a single line of text with the page's default font.
 pub fn Page::text(
   self : Page,
@@ -63,7 +162,7 @@ pub fn Page::text_with_font(
   font_id : Int32,
   text : String,
 ) -> TextObject {
-  let width = estimate_text_width(text, size)
+  let width = self.measure_text(text, size)
   let height = size * 1.2
   let obj = {
     id: self.alloc_id(),

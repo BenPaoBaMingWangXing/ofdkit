@@ -20,6 +20,9 @@ fn usage() -> Unit {
   println("  ofdkit verify <file.ofd>           校验已有文档的结构")
   println("  ofdkit info <file.ofd>             打印文档摘要")
   println("  ofdkit font-info <font.ttf>        查看字体基本信息")
+  println(
+    "  ofdkit measure <font.ttf> <size> <text>  计算文本宽度（毫米）",
+  )
 }
 
 ///|
@@ -53,8 +56,18 @@ fn build_demo(doc : @ofdkit.Document) -> Unit {
   page.text(20.0, 52.0, 12.0, demo_texts[1])
   page.text(20.0, 70.0, 6.0, demo_texts[2])
   page.line(20.0, 80.0, 190.0, 80.0, 0.4)
-  page.text(20.0, 95.0, 5.0, demo_texts[3])
-  page.text(20.0, 104.0, 5.0, demo_texts[4])
+  // One wrapped paragraph instead of two hand-placed lines: the page measures
+  // the text with the embedded font and breaks it at 170 mm.
+  ignore(
+    page.paragraph(
+      20.0,
+      95.0,
+      170.0,
+      5.0,
+      7.0,
+      demo_texts[3] + demo_texts[4],
+    ),
+  )
   // A simple table drawn with paths.
   page.rect(20.0, 120.0, 170.0, 40.0, 0.3)
   page.line(20.0, 133.0, 190.0, 133.0, 0.2)
@@ -185,6 +198,34 @@ fn cmd_font_info(path : String) -> Unit {
 }
 
 ///|
+fn cmd_measure(font_path : String, size_text : String, text : String) -> Unit {
+  let size = match @ofdkit.parse_double(size_text) {
+    None => {
+      println("字号无法解析: \{size_text}")
+      return
+    }
+    Some(value) => value
+  }
+  match read_font(font_path) {
+    None => ()
+    Some(bytes) =>
+      match @ofdkit.parse_ttf(bytes) {
+        Err(message) => println("字体解析失败: \{message}")
+        Ok(face) => {
+          let upem = face.units_per_em()
+          let mut units = 0
+          for ch in text {
+            let glyph = face.glyph_for_char(ch.to_uint().reinterpret_as_int())
+            units = units + face.advance_width(glyph)
+          }
+          let width = units.to_double() / upem.to_double() * size
+          println("\{width}")
+        }
+      }
+  }
+}
+
+///|
 fn main {
   let args = @env.args()
   if args.length() < 3 {
@@ -201,6 +242,13 @@ fn main {
     "verify" => cmd_verify(path)
     "info" => cmd_info(path)
     "font-info" => cmd_font_info(path)
+    "measure" => {
+      if args.length() < 5 {
+        println("用法: ofdkit measure <font.ttf> <size> <text>")
+        return
+      }
+      cmd_measure(path, args[3], args[4])
+    }
     _ => {
       println("未知命令: \{command}")
       println("")

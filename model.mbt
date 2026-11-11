@@ -117,6 +117,9 @@ pub struct Page {
   mut next_id : Int32
   /// Font used by `text` when no explicit font is given.
   default_font : Int32
+  /// Parsed metrics for the default font, when it is embedded. Drives accurate
+  /// text measurement and line breaking; `None` falls back to estimation.
+  font_face : TtfFace?
 }
 
 ///|
@@ -233,6 +236,24 @@ pub fn Document::add_embedded_font(
 }
 
 ///|
+/// Parse the primary font so pages can measure text with real glyph metrics.
+/// Parsing a face is just a table-directory walk, so this is cheap to repeat.
+fn Document::default_face(self : Document) -> TtfFace? {
+  if self.primary_font == 0 {
+    return None
+  }
+  for font in self.fonts {
+    if font.id == self.primary_font && font.data.length() > 0 {
+      match parse_ttf(font.data) {
+        Ok(face) => return Some(face)
+        Err(_) => return None
+      }
+    }
+  }
+  None
+}
+
+///|
 /// Font id that new pages will use. Zero means the document has no embedded
 /// font, and pages fall back to a named system font.
 pub fn Document::primary_font_id(self : Document) -> Int32 {
@@ -254,6 +275,7 @@ pub fn Document::add_page(self : Document) -> Page {
     } else {
       self.add_font("SimSun")
     },
+    font_face: self.default_face(),
   }
   self.pages.push(page)
   page
@@ -278,6 +300,7 @@ pub fn Document::add_page_sized(
     } else {
       self.add_font("SimSun")
     },
+    font_face: self.default_face(),
   }
   self.pages.push(page)
   page
