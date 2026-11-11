@@ -46,13 +46,12 @@ moon add BenPaoBaMingWangXing/ofdkit
 
 ## 快速开始
 
-```mbt nocheck
-///|
+```mbt
 fn build_report() -> Bytes {
   let doc = @ofdkit.Document::new()
     .set_title("月度报表")
     .set_author("财务部")
-  let page = doc.add_page() // A4, 210 x 297 mm
+  let page = doc.add_page()          // A4, 210 x 297 mm
   page.text(20.0, 30.0, 10.0, "月度报表")
   page.line(20.0, 38.0, 190.0, 38.0, 0.4)
   page.text(20.0, 50.0, 5.0, "本期收入较上期增长 12.4%。")
@@ -65,7 +64,7 @@ fn build_report() -> Bytes {
 
 ### 嵌入中文字体
 
-```mbt nocheck
+```mbt
 let font_bytes = @fs.read_file_to_bytes("C:/Windows/Fonts/simhei.ttf")
 // 子集只覆盖这段文本里出现的字符。
 ignore(doc.embed_font_for_text("SimHei", font_bytes, "月度报表 本期收入 12.4%"))
@@ -145,11 +144,8 @@ Doc_0/Res/Font_1.ttf            子集化后的嵌入字体
 
 报表里最常画的其实是表格。`TableStyle` 只需要列宽，行数从数据推出来：
 
-```mbt nocheck
-///|
+```mbt
 let style = @ofdkit.TableStyle::new(20.0, 118.0, [40.0, 130.0])
-
-///|
 let bottom = page.table(style, [
   ["项目", "说明"],
   ["容器", "ZIP，入口 OFD.xml"],
@@ -161,7 +157,7 @@ let bottom = page.table(style, [
 
 表格超过一页时用 `table_across_pages`，它会自动加页并在每页重复表头：
 
-```mbt nocheck
+```mbt
 let (last_page, next_y) = doc.table_across_pages(page, style, rows)
 ```
 
@@ -169,7 +165,7 @@ A4、20 mm 页边距、6.5 mm 行高时，每页容纳 38 行正文加表头。
 
 对齐是同一套度量的直接应用：
 
-```mbt nocheck
+```mbt
 page.text_aligned(20.0, 52.0, 170.0, 12.0, @ofdkit.Center, "标题")
 ```
 
@@ -177,7 +173,7 @@ page.text_aligned(20.0, 52.0, 170.0, 12.0, @ofdkit.Center, "标题")
 
 长文档需要书签。`add_outline` 接受目标页面和层级：
 
-```mbt nocheck
+```mbt
 let cover = doc.add_page()
 let chapter = doc.add_page()
 doc.add_outline("封面", cover, 1)
@@ -201,12 +197,9 @@ doc.add_outline("1.1 背景", chapter, 2)
 
 自动换行基于同一套度量：
 
-```mbt nocheck
+```mbt
 // 在 x=20，宽 170mm 的栏内排版，行高 8mm；返回最后一行的下一行 y
-///|
-let next_y = page.paragraph(
-  20.0, 30.0, 170.0, 5.0, 8.0, "很长的一段中文……",
-)
+let next_y = page.paragraph(20.0, 30.0, 170.0, 5.0, 8.0, "很长的一段中文……")
 ```
 
 ## 与成熟实现的结构对齐
@@ -254,6 +247,12 @@ moon test
 - [ ] 两端对齐与字间距
 - [ ] GB/T 38540 电子签章
 
+## 文档
+
+- [项目申报书](docs/PROPOSAL.md)：背景、Scope（做什么 / 不做什么）、里程碑、可机器验证的验收判据
+- [开发历程](docs/DEVLOG.md)：选题查重、三个真实 bug 的来龙去脉、AI 工具怎么用、对 ofdrw 与 FreeType 的借鉴
+- [CHANGELOG](CHANGELOG.md)：每个版本改了什么
+
 ## 许可证
 
-Apache-2.0，见 [LICENSE](LICENSE)。
+Apache-2.0，见 [LICENSE](LICENSE)。第三方归属见 [NOTICE](NOTICE)。

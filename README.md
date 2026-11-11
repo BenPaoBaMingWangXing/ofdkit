@@ -247,6 +247,12 @@ moon test
 - [ ] 两端对齐与字间距
 - [ ] GB/T 38540 电子签章
 
+## 文档
+
+- [项目申报书](docs/PROPOSAL.md)：背景、Scope（做什么 / 不做什么）、里程碑、可机器验证的验收判据
+- [开发历程](docs/DEVLOG.md)：选题查重、三个真实 bug 的来龙去脉、AI 工具怎么用、对 ofdrw 与 FreeType 的借鉴
+- [CHANGELOG](CHANGELOG.md)：每个版本改了什么
+
 ## 许可证
 
-Apache-2.0，见 [LICENSE](LICENSE)。
+Apache-2.0，见 [LICENSE](LICENSE)。第三方归属见 [NOTICE](NOTICE)。
