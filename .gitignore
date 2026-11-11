@@ -1,0 +1,15 @@
+.DS_Store
+_build/
+target/
+target
+.mooncakes/
+.moonagent/
+
+# Generated demo packages
+out/
+*.ofd
+
+# Editor noise
+.idea/
+.vscode/
+*.swp

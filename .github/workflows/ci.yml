@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Toolchain version
+        run: moon version
+
+      - name: Build
+        run: moon build
+
+      - name: Test
+        run: moon test
+
+      - name: Generate demo package
+        run: |
+          mkdir -p out
+          moon run cmd/main -- demo out/demo.ofd
+
+      - name: Self check
+        run: moon run cmd/main -- verify out/demo.ofd
+
+      - name: Independent structural check
+        run: python3 scripts/verify_ofd.py out/demo.ofd

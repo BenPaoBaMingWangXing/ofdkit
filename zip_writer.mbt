@@ -1,0 +1,123 @@
+///|
+/// Minimal ZIP writer tuned for OFD packages.
+///
+/// OFD (GB/T 33190-2016) is a ZIP archive whose entry point is `OFD.xml`.
+/// This writer emits stored (uncompressed) entries only; that is legal ZIP and
+/// keeps the container logic dependency free. A deflate pass can be layered on
+/// later without touching callers.
+
+///|
+struct ZipEntry {
+  name : String
+  crc : UInt
+  size : UInt
+  offset : UInt
+}
+
+///|
+pub struct ZipWriter {
+  out : ByteBuf
+  entries : Array[ZipEntry]
+  mut finished : Bool
+}
+
+///|
+pub fn ZipWriter::new() -> ZipWriter {
+  { out: ByteBuf::new(), entries: [], finished: false }
+}
+
+///|
+/// MS-DOS timestamp for 1980-01-01 00:00:00, the ZIP epoch.
+/// OFD does not care about timestamps, so a fixed value keeps output
+/// byte-for-byte reproducible.
+const DOS_TIME : UInt = 0x0000U
+
+///|
+const DOS_DATE : UInt = 0x0021U
+
+///|
+/// Append one file. `name` must be an ASCII path relative to the archive root,
+/// using forward slashes and no leading slash, e.g. `Doc_0/Document.xml`.
+pub fn ZipWriter::add_file(
+  self : ZipWriter,
+  name : String,
+  data : Bytes,
+) -> Unit {
+  if self.finished {
+    abort("ZipWriter: cannot add a file after finish()")
+  }
+  let crc = crc32(data)
+  let size = data.length().reinterpret_as_uint()
+  let offset = self.out.length().reinterpret_as_uint()
+  let name_bytes = @utf8.encode(name)
+  // Local file header.
+  self.out.write_u32_le(0x04034B50U)
+  self.out.write_u16_le(20U) // version needed to extract
+  self.out.write_u16_le(0U) // general purpose flags
+  self.out.write_u16_le(0U) // compression method: stored
+  self.out.write_u16_le(DOS_TIME)
+  self.out.write_u16_le(DOS_DATE)
+  self.out.write_u32_le(crc)
+  self.out.write_u32_le(size)
+  self.out.write_u32_le(size)
+  self.out.write_u16_le(name_bytes.length().reinterpret_as_uint())
+  self.out.write_u16_le(0U) // extra field length
+  self.out.write_bytes(name_bytes)
+  self.out.write_bytes(data)
+  self.entries.push({ name, crc, size, offset })
+}
+
+///|
+/// Number of files added so far.
+pub fn ZipWriter::entry_count(self : ZipWriter) -> Int {
+  self.entries.length()
+}
+
+///|
+/// Names of the files added so far, in insertion order.
+pub fn ZipWriter::names(self : ZipWriter) -> Array[String] {
+  self.entries.map(fn(entry) { entry.name })
+}
+
+///|
+/// Write the central directory and end-of-central-directory record, then
+/// return the complete archive.
+pub fn ZipWriter::finish(self : ZipWriter) -> Bytes {
+  if self.finished {
+    abort("ZipWriter: finish() called twice")
+  }
+  let cd_offset = self.out.length().reinterpret_as_uint()
+  for entry in self.entries {
+    let name_bytes = @utf8.encode(entry.name)
+    self.out.write_u32_le(0x02014B50U)
+    self.out.write_u16_le(20U) // version made by
+    self.out.write_u16_le(20U) // version needed
+    self.out.write_u16_le(0U) // flags
+    self.out.write_u16_le(0U) // method
+    self.out.write_u16_le(DOS_TIME)
+    self.out.write_u16_le(DOS_DATE)
+    self.out.write_u32_le(entry.crc)
+    self.out.write_u32_le(entry.size)
+    self.out.write_u32_le(entry.size)
+    self.out.write_u16_le(name_bytes.length().reinterpret_as_uint())
+    self.out.write_u16_le(0U) // extra
+    self.out.write_u16_le(0U) // comment
+    self.out.write_u16_le(0U) // disk number start
+    self.out.write_u16_le(0U) // internal attributes
+    self.out.write_u32_le(0U) // external attributes
+    self.out.write_u32_le(entry.offset)
+    self.out.write_bytes(name_bytes)
+  }
+  let cd_size = self.out.length().reinterpret_as_uint() - cd_offset
+  let count = self.entries.length().reinterpret_as_uint()
+  self.out.write_u32_le(0x06054B50U)
+  self.out.write_u16_le(0U) // this disk
+  self.out.write_u16_le(0U) // disk with central directory
+  self.out.write_u16_le(count)
+  self.out.write_u16_le(count)
+  self.out.write_u32_le(cd_size)
+  self.out.write_u32_le(cd_offset)
+  self.out.write_u16_le(0U) // comment length
+  self.finished = true
+  self.out.to_bytes()
+}

@@ -1,0 +1,223 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "BenPaoBaMingWangXing/ofdkit"
+
+// Values
+pub fn crc32(Bytes) -> UInt32
+
+pub fn estimate_text_width(String, Double) -> Double
+
+pub fn fmt_hex(UInt32) -> String
+
+pub fn fmt_mm(Double) -> String
+
+pub fn font_file_path(Int32) -> String
+
+pub fn page_content_path(Int32) -> String
+
+pub fn parse_zip(Bytes) -> Result[ZipArchive, String]
+
+pub fn serialize_content(Page) -> String
+
+pub fn serialize_document(Document) -> String
+
+pub fn serialize_ofd_xml(Document) -> String
+
+pub fn serialize_public_res(Document) -> String
+
+pub fn verify_ofd(Bytes) -> VerifyReport
+
+pub fn xml_escape(String) -> String
+
+// Errors
+
+// Types and methods
+pub struct ByteBuf {
+  mut data : FixedArray[Byte]
+  mut len : Int32
+}
+pub fn ByteBuf::length(Self) -> Int32
+pub fn ByteBuf::new() -> Self
+pub fn ByteBuf::to_bytes(Self) -> Bytes
+pub fn ByteBuf::with_capacity(Int32) -> Self
+pub fn ByteBuf::write_ascii(Self, String) -> Unit
+pub fn ByteBuf::write_byte(Self, Byte) -> Unit
+pub fn ByteBuf::write_bytes(Self, Bytes) -> Unit
+pub fn ByteBuf::write_u16_le(Self, UInt32) -> Unit
+pub fn ByteBuf::write_u32_le(Self, UInt32) -> Unit
+
+pub struct Color {
+  r : Int32
+  g : Int32
+  b : Int32
+}
+pub fn Color::black() -> Self
+pub fn Color::new(Int32, Int32, Int32) -> Self
+pub fn Color::white() -> Self
+
+pub struct Crc32 {
+  mut value : UInt32
+}
+pub fn Crc32::finalize(Self) -> UInt32
+pub fn Crc32::new() -> Self
+pub fn Crc32::update(Self, Bytes) -> Unit
+
+pub struct Document {
+  mut title : String
+  mut author : String
+  mut subject : String
+  creator : String
+  mut keywords : String
+  mut doc_id : String
+  mut creation_date : String
+  pages : Array[Page]
+  fonts : Array[Font]
+  mut next_id : Int32
+}
+pub fn Document::add_embedded_font(Self, String, Bytes) -> Int32
+pub fn Document::add_font(Self, String) -> Int32
+pub fn Document::add_page(Self) -> Page
+pub fn Document::add_page_sized(Self, Double, Double) -> Page
+pub fn Document::alloc_id(Self) -> Int32
+pub fn Document::entry_names(Self) -> Array[String]
+pub fn Document::max_unit_id(Self) -> Int32
+pub fn Document::new() -> Self
+pub fn Document::page_count(Self) -> Int32
+pub fn Document::set_author(Self, String) -> Self
+pub fn Document::set_creation_date(Self, String) -> Self
+pub fn Document::set_doc_id(Self, String) -> Self
+pub fn Document::set_keywords(Self, String) -> Self
+pub fn Document::set_subject(Self, String) -> Self
+pub fn Document::set_title(Self, String) -> Self
+pub fn Document::to_bytes(Self) -> Bytes
+
+pub enum DrawObject {
+  Text(TextObject)
+  Path(PathObject)
+  Image(ImageObject)
+}
+
+pub struct Font {
+  id : Int32
+  name : String
+  family : String
+  data : Bytes
+}
+pub fn Font::embedded(Int32, String, Bytes) -> Self
+pub fn Font::named(Int32, String) -> Self
+
+pub struct ImageObject {
+  id : Int32
+  boundary : Rect
+  resource_id : Int32
+}
+
+pub struct Page {
+  id : Int32
+  width : Double
+  height : Double
+  objects : Array[DrawObject]
+  mut next_id : Int32
+  default_font : Int32
+}
+pub fn Page::fill_rect(Self, Double, Double, Double, Double, Color) -> Unit
+pub fn Page::fill_rect_object(Self, Double, Double, Double, Double, Color) -> PathObject
+pub fn Page::line(Self, Double, Double, Double, Double, Double) -> Unit
+pub fn Page::line_object(Self, Double, Double, Double, Double, Double) -> PathObject
+pub fn Page::object_count(Self) -> Int32
+pub fn Page::path(Self, Double, Double, Double, Double, String, Double) -> Unit
+pub fn Page::path_object(Self, Double, Double, Double, Double, String, Double) -> PathObject
+pub fn Page::rect(Self, Double, Double, Double, Double, Double) -> Unit
+pub fn Page::rect_object(Self, Double, Double, Double, Double, Double) -> PathObject
+pub fn Page::text(Self, Double, Double, Double, String) -> Unit
+pub fn Page::text_object(Self, Double, Double, Double, String) -> TextObject
+pub fn Page::text_with_font(Self, Double, Double, Double, Int32, String) -> TextObject
+
+pub struct PathObject {
+  id : Int32
+  boundary : Rect
+  line_width : Double
+  stroke : Bool
+  fill : Bool
+  stroke_color : Color
+  fill_color : Color
+  data : String
+}
+
+pub struct Rect {
+  x : Double
+  y : Double
+  width : Double
+  height : Double
+}
+pub fn Rect::new(Double, Double, Double, Double) -> Self
+
+pub struct TextObject {
+  id : Int32
+  boundary : Rect
+  font_id : Int32
+  size : Double
+  color : Color
+  text : String
+  offset_x : Double
+  offset_y : Double
+}
+
+pub struct VerifyCheck {
+  name : String
+  passed : Bool
+  detail : String
+}
+
+pub struct VerifyReport {
+  checks : Array[VerifyCheck]
+}
+pub fn VerifyReport::failures(Self) -> Array[VerifyCheck]
+pub fn VerifyReport::passed(Self) -> Bool
+pub fn VerifyReport::summary(Self) -> String
+
+pub struct Xml {
+  sb : StringBuilder
+  mut depth : Int32
+}
+pub fn Xml::close(Self, String) -> Unit
+pub fn Xml::declaration(Self) -> Unit
+pub fn Xml::empty(Self, String, Array[(String, String)]) -> Unit
+pub fn Xml::leaf(Self, String, Array[(String, String)], String) -> Unit
+pub fn Xml::new() -> Self
+pub fn Xml::open(Self, String, Array[(String, String)]) -> Unit
+pub fn Xml::to_string(Self) -> String
+
+pub struct ZipArchive {
+  entries : Array[ZipEntryInfo]
+  data : Bytes
+}
+pub fn ZipArchive::contains(Self, String) -> Bool
+pub fn ZipArchive::entry(Self, String) -> ZipEntryInfo?
+pub fn ZipArchive::names(Self) -> Array[String]
+pub fn ZipArchive::read(Self, String) -> Result[Bytes, String]
+
+type ZipEntry
+
+pub struct ZipEntryInfo {
+  name : String
+  method : UInt32
+  crc : UInt32
+  compressed_size : Int32
+  uncompressed_size : Int32
+  local_offset : Int32
+}
+
+pub struct ZipWriter {
+  out : ByteBuf
+  entries : Array[ZipEntry]
+  mut finished : Bool
+}
+pub fn ZipWriter::add_file(Self, String, Bytes) -> Unit
+pub fn ZipWriter::entry_count(Self) -> Int32
+pub fn ZipWriter::finish(Self) -> Bytes
+pub fn ZipWriter::names(Self) -> Array[String]
+pub fn ZipWriter::new() -> Self
+
+// Type aliases
+
+// Traits
