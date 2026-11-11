@@ -19,6 +19,9 @@ jobs:
       - name: Toolchain version
         run: moon version
 
+      - name: Update registry index
+        run: moon update
+
       - name: Build
         run: moon build
 
