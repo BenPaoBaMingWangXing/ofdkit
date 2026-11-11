@@ -1,0 +1,9 @@
+// Command line entry point for ofdkit.
+
+import {
+  "BenPaoBaMingWangXing/ofdkit" @ofdkit,
+  "moonbitlang/x/fs" @fs,
+  "moonbitlang/core/env" @env,
+}
+
+pkgtype(kind: "executable")
