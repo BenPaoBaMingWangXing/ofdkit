@@ -3,6 +3,13 @@
 All notable changes to ofdkit are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.9.2
+
+- Documentation only, so the published package matches the repository: exact
+  module line counts, the CI step list without a brittle number, the exit-code
+  behaviour in the CLI section, and a devlog entry about the audit that found
+  the always-zero exit code.
+
 ## 0.9.1
 
 - **`ofdkit verify` now exits non-zero when a check fails.** It used to print
