@@ -26,17 +26,17 @@ fn make_crc32_table() -> Array[UInt32] {
 
 ///|
 /// Incremental CRC-32 state. Call `update` for each chunk, then `finalize`.
-pub struct Crc32 {
+priv struct Crc32 {
   mut value : UInt32
 }
 
 ///|
-pub fn Crc32::new() -> Crc32 {
+fn Crc32::new() -> Crc32 {
   { value: 0xFFFFFFFFU, }
 }
 
 ///|
-pub fn Crc32::update(self : Crc32, data : Bytes) -> Unit {
+fn Crc32::update(self : Crc32, data : Bytes) -> Unit {
   let mut c = self.value
   let n = data.length()
   for i in 0..<n {
@@ -47,12 +47,12 @@ pub fn Crc32::update(self : Crc32, data : Bytes) -> Unit {
 }
 
 ///|
-pub fn Crc32::finalize(self : Crc32) -> UInt32 {
+fn Crc32::finalize(self : Crc32) -> UInt32 {
   self.value ^ 0xFFFFFFFFU
 }
 
 ///|
-pub fn crc32(data : Bytes) -> UInt32 {
+fn crc32(data : Bytes) -> UInt32 {
   let c = Crc32::new()
   c.update(data)
   c.finalize()

@@ -8,7 +8,7 @@
 ///|
 /// A selected character map subtable: byte offset of the subtable and its
 /// format number.
-pub struct CmapSubtable {
+priv struct CmapSubtable {
   offset : Int32
   format : Int32
 }
@@ -32,7 +32,7 @@ fn encoding_priority(platform : Int32, encoding : Int32) -> Int32 {
 }
 
 ///|
-pub fn TtfFace::cmap(self : TtfFace) -> CmapSubtable? {
+fn TtfFace::cmap(self : TtfFace) -> CmapSubtable? {
   let table = match self.table("cmap") {
     Some(table) => table
     None => return None

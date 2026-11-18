@@ -5,11 +5,11 @@
 
 ///|
 test "zip reader round trips a stored entry" {
-  let zw = @ofdkit.ZipWriter::new()
+  let zw = ZipWriter::new()
   zw.add_file("OFD.xml", b"<ofd:OFD/>")
   zw.add_file("Doc_0/Document.xml", b"<ofd:Document/>")
   let archive = zw.finish()
-  match @ofdkit.parse_zip(archive) {
+  match parse_zip(archive) {
     Err(message) => fail("expected a readable archive, got \{message}")
     Ok(zip) => {
       assert_eq(zip.names().length(), 2)
@@ -24,7 +24,7 @@ test "zip reader round trips a stored entry" {
 
 ///|
 test "zip reader rejects a truncated archive" {
-  let zw = @ofdkit.ZipWriter::new()
+  let zw = ZipWriter::new()
   zw.add_file("OFD.xml", b"<ofd:OFD/>")
   let archive = zw.finish()
   let keep = archive.length() - 10
@@ -34,7 +34,7 @@ test "zip reader rejects a truncated archive" {
   }
   let short = Bytes::from_array(tmp[:])
   // Not a valid archive any more; parse must fail rather than panic.
-  match @ofdkit.parse_zip(short) {
+  match parse_zip(short) {
     Err(_) => assert_true(true)
     Ok(_) => fail("a truncated archive should not parse")
   }
@@ -42,19 +42,19 @@ test "zip reader rejects a truncated archive" {
 
 ///|
 test "verify accepts a well formed document" {
-  let doc = @ofdkit.Document::new().set_title("示例")
+  let doc = Document::new().set_title("示例")
   let page = doc.add_page()
   page.text(20.0, 20.0, 5.0, "你好")
-  let report = @ofdkit.verify_ofd(pack(doc))
+  let report = verify_ofd(pack(doc))
   assert_true(report.passed())
   assert_eq(report.failures().length(), 0)
 }
 
 ///|
 test "verify reports every check it ran" {
-  let doc = @ofdkit.Document::new()
+  let doc = Document::new()
   ignore(doc.add_page())
-  let report = @ofdkit.verify_ofd(pack(doc))
+  let report = verify_ofd(pack(doc))
   assert_true(report.checks.length() >= 8)
   assert_true(report.summary().contains("checks passed"))
 }
@@ -62,35 +62,35 @@ test "verify reports every check it ran" {
 ///|
 test "verify rejects bytes that are not an archive" {
   let junk : Bytes = b"not an ofd file at all"
-  let report = @ofdkit.verify_ofd(junk)
+  let report = verify_ofd(junk)
   assert_false(report.passed())
 }
 
 ///|
 test "verify catches a package missing its page stream" {
   // Assemble a package by hand that claims a page but ships no content stream.
-  let zw = @ofdkit.ZipWriter::new()
+  let zw = ZipWriter::new()
   let ofd_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ofd:OFD xmlns:ofd=\"http://www.ofdspec.org/2016\" DocType=\"OFD\" Version=\"1.1\"><ofd:DocBody><ofd:DocRoot>Doc_0/Document.xml</ofd:DocRoot></ofd:DocBody></ofd:OFD>"
   let doc_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ofd:Document xmlns:ofd=\"http://www.ofdspec.org/2016\"><ofd:Pages><ofd:Page ID=\"1\" BaseLoc=\"Pages/Page_0/Content.xml\"/></ofd:Pages></ofd:Document>"
   zw.add_file("OFD.xml", @utf8.encode(ofd_xml))
   zw.add_file("Doc_0/Document.xml", @utf8.encode(doc_xml))
-  let report = @ofdkit.verify_ofd(zw.finish())
+  let report = verify_ofd(zw.finish())
   assert_false(report.passed())
   assert_true(report.failures().length() > 0)
 }
 
 ///|
 test "max unit id covers page object ids" {
-  let doc = @ofdkit.Document::new()
+  let doc = Document::new()
   let page = doc.add_page()
   page.text(10.0, 10.0, 4.0, "a")
   page.text(10.0, 20.0, 4.0, "b")
   let max = doc.max_unit_id()
   for obj in page.objects {
     let id = match obj {
-      @ofdkit.Text(t) => t.id
-      @ofdkit.Path(p) => p.id
-      @ofdkit.Image(i) => i.id
+      Text(t) => t.id
+      Path(p) => p.id
+      Image(i) => i.id
     }
     assert_true(max >= id)
   }
@@ -99,7 +99,7 @@ test "max unit id covers page object ids" {
 ///|
 test "verify rejects a package whose font file is not a font" {
   // Hand-build a package that declares a font and ships garbage bytes for it.
-  let zw = @ofdkit.ZipWriter::new()
+  let zw = ZipWriter::new()
   let ofd_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ofd:OFD xmlns:ofd=\"http://www.ofdspec.org/2016\" DocType=\"OFD\" Version=\"1.1\"><ofd:DocBody><ofd:DocRoot>Doc_0/Document.xml</ofd:DocRoot></ofd:DocBody></ofd:OFD>"
   let doc_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ofd:Document xmlns:ofd=\"http://www.ofdspec.org/2016\"><ofd:CommonData><ofd:PageArea><ofd:PhysicalBox>0 0 210 297</ofd:PhysicalBox></ofd:PageArea><ofd:PublicRes>PublicRes.xml</ofd:PublicRes><ofd:MaxUnitID>4</ofd:MaxUnitID></ofd:CommonData><ofd:Pages><ofd:Page ID=\"1\" BaseLoc=\"Pages/Page_0/Content.xml\"/></ofd:Pages></ofd:Document>"
   let res_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ofd:Res xmlns:ofd=\"http://www.ofdspec.org/2016\" BaseLoc=\"Res\"><ofd:Fonts><ofd:Font ID=\"2\" FontName=\"SimHei\" FamilyName=\"SimHei\" Charset=\"unicode\"><ofd:FontFile>Font_2.ttf</ofd:FontFile></ofd:Font></ofd:Fonts></ofd:Res>"
@@ -109,7 +109,7 @@ test "verify rejects a package whose font file is not a font" {
   zw.add_file("Doc_0/PublicRes.xml", @utf8.encode(res_xml))
   zw.add_file("Doc_0/Pages/Page_0/Content.xml", @utf8.encode(page_xml))
   zw.add_file("Doc_0/Res/Font_2.ttf", b"this is not a font file")
-  let report = @ofdkit.verify_ofd(zw.finish())
+  let report = verify_ofd(zw.finish())
   assert_false(report.passed())
   let mut found = false
   for failure in report.failures() {
@@ -121,13 +121,13 @@ test "verify rejects a package whose font file is not a font" {
 }
 
 ///|
-fn push_u16(bytes : Array[Int32], value : Int) -> Unit {
+fn push_u16(bytes : Array[Int32], value : Int32) -> Unit {
   bytes.push((value >> 8) & 0xFF)
   bytes.push(value & 0xFF)
 }
 
 ///|
-fn push_u32(bytes : Array[Int32], value : Int) -> Unit {
+fn push_u32(bytes : Array[Int32], value : Int32) -> Unit {
   bytes.push((value >> 24) & 0xFF)
   bytes.push((value >> 16) & 0xFF)
   bytes.push((value >> 8) & 0xFF)
@@ -247,7 +247,7 @@ fn synthetic_font(codes : Array[Int32]) -> Bytes {
     ("maxp", maxp),
   ]
   let count = tables.length()
-  let offsets : Array[Int] = []
+  let offsets : Array[Int32] = []
   let mut cursor = 12 + count * 16
   for i in 0..<count {
     offsets.push(cursor)
@@ -281,12 +281,12 @@ fn synthetic_font(codes : Array[Int32]) -> Bytes {
 
 ///|
 test "a character outside the subset fails the coverage check" {
-  let doc = @ofdkit.Document::new()
+  let doc = Document::new()
   // The subset knows 'A' only.
   let font_id = doc.add_embedded_font("Synth", synthetic_font([0x41]))
   let page = doc.add_page()
   ignore(page.text_with_font(20.0, 30.0, 10.0, font_id, "AB"))
-  let report = @ofdkit.verify_ofd(pack(doc))
+  let report = verify_ofd(pack(doc))
   let mut detail = ""
   let mut seen = false
   for check in report.failures() {
@@ -302,11 +302,11 @@ test "a character outside the subset fails the coverage check" {
 
 ///|
 test "coverage check passes when the subset has every character" {
-  let doc = @ofdkit.Document::new()
+  let doc = Document::new()
   let font_id = doc.add_embedded_font("Synth", synthetic_font([0x41, 0x42]))
   let page = doc.add_page()
   ignore(page.text_with_font(20.0, 30.0, 10.0, font_id, "ABBA"))
-  let report = @ofdkit.verify_ofd(pack(doc))
+  let report = verify_ofd(pack(doc))
   let mut detail = ""
   for check in report.checks {
     if check.name == "every drawn character is embedded" {

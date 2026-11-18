@@ -6,55 +6,13 @@ pub const TABLE_PAGE_BOTTOM : Double = 20.0
 
 pub const TABLE_PAGE_TOP : Double = 20.0
 
-pub fn code_points_of(String) -> Array[Int32]
-
-pub fn crc32(Bytes) -> UInt32
-
-pub fn deflate_raw(Bytes) -> Bytes
-
-pub fn detect_image_format(Bytes) -> Result[ImageFormat, String]
-
 pub fn estimate_text_width(String, Double) -> Double
-
-pub fn fmt_hex(UInt32) -> String
-
-pub fn fmt_mm(Double) -> String
-
-pub fn font_file_path(Int32) -> String
-
-pub fn font_glyph_count(Bytes) -> Result[Int32, String]
-
-pub fn image_file_name(Int32, ImageFormat) -> String
-
-pub fn image_file_path(Int32, ImageFormat) -> String
-
-pub fn inflate_raw(Bytes) -> Result[Bytes, String]
-
-pub fn page_content_path(Int32) -> String
-
-pub fn parse_double(String) -> Double?
 
 pub fn parse_ttf(Bytes) -> Result[TtfFace, String]
 
 pub fn parse_zip(Bytes) -> Result[ZipArchive, String]
 
-pub fn serialize_content(Page) -> String
-
-pub fn serialize_document(Document) -> String
-
-pub fn serialize_document_res(Document) -> String
-
-pub fn serialize_ofd_xml(Document) -> String
-
-pub fn serialize_public_res(Document) -> String
-
-pub fn subset_font(TtfFace, Array[Int32]) -> Result[Bytes, String]
-
-pub fn subset_font_renumbered(TtfFace, Array[Int32]) -> Result[Bytes, String]
-
 pub fn verify_ofd(Bytes) -> VerifyReport
-
-pub fn xml_escape(String) -> String
 
 // Errors
 
@@ -66,43 +24,6 @@ pub(all) enum Align {
   Justify
 }
 
-pub struct BitReader {
-  data : Bytes
-  mut pos : Int32
-  mut bit : Int32
-}
-pub fn BitReader::new(Bytes) -> Self
-
-pub struct BitWriter {
-  out : ByteBuf
-  mut bits : UInt32
-  mut count : Int32
-}
-pub fn BitWriter::flush(Self) -> Bytes
-pub fn BitWriter::new() -> Self
-
-pub struct ByteBuf {
-  mut data : FixedArray[Byte]
-  mut len : Int32
-}
-pub fn ByteBuf::byte_at(Self, Int32) -> Byte
-pub fn ByteBuf::length(Self) -> Int32
-pub fn ByteBuf::new() -> Self
-pub fn ByteBuf::to_bytes(Self) -> Bytes
-pub fn ByteBuf::with_capacity(Int32) -> Self
-pub fn ByteBuf::write_ascii(Self, String) -> Unit
-pub fn ByteBuf::write_byte(Self, Byte) -> Unit
-pub fn ByteBuf::write_bytes(Self, Bytes) -> Unit
-pub fn ByteBuf::write_u16_be(Self, UInt32) -> Unit
-pub fn ByteBuf::write_u16_le(Self, UInt32) -> Unit
-pub fn ByteBuf::write_u32_be(Self, UInt32) -> Unit
-pub fn ByteBuf::write_u32_le(Self, UInt32) -> Unit
-
-pub struct CmapSubtable {
-  offset : Int32
-  format : Int32
-}
-
 pub struct Color {
   r : Int32
   g : Int32
@@ -111,13 +32,6 @@ pub struct Color {
 pub fn Color::black() -> Self
 pub fn Color::new(Int32, Int32, Int32) -> Self
 pub fn Color::white() -> Self
-
-pub struct Crc32 {
-  mut value : UInt32
-}
-pub fn Crc32::finalize(Self) -> UInt32
-pub fn Crc32::new() -> Self
-pub fn Crc32::update(Self, Bytes) -> Unit
 
 pub struct Document {
   mut title : String
@@ -140,15 +54,10 @@ pub fn Document::add_image(Self, Bytes) -> Result[Int32, String]
 pub fn Document::add_outline(Self, String, Page, Int32) -> Unit
 pub fn Document::add_page(Self) -> Page
 pub fn Document::add_page_sized(Self, Double, Double) -> Page
-pub fn Document::alloc_id(Self) -> Int32
-pub fn Document::directory_names(Self) -> Array[String]
 pub fn Document::embed_font_for_text(Self, String, Bytes, String) -> Result[Int32, String]
-pub fn Document::entry_names(Self) -> Array[String]
-pub fn Document::max_unit_id(Self) -> Int32
 pub fn Document::new() -> Self
 pub fn Document::outline_count(Self) -> Int32
 pub fn Document::page_count(Self) -> Int32
-pub fn Document::primary_font_id(Self) -> Int32
 pub fn Document::set_author(Self, String) -> Self
 pub fn Document::set_creation_date(Self, String) -> Self
 pub fn Document::set_doc_id(Self, String) -> Self
@@ -170,8 +79,6 @@ pub struct Font {
   family : String
   data : Bytes
 }
-pub fn Font::embedded(Int32, String, Bytes) -> Self
-pub fn Font::named(Int32, String) -> Self
 
 pub enum ImageFormat {
   Png
@@ -207,26 +114,20 @@ pub struct Page {
   font_face : TtfFace?
 }
 pub fn Page::fill_rect(Self, Double, Double, Double, Double, Color) -> Unit
-pub fn Page::fill_rect_object(Self, Double, Double, Double, Double, Color) -> PathObject
 pub fn Page::fit_text(Self, String, Double, Double) -> String
 pub fn Page::image(Self, Double, Double, Double, Double, Int32) -> Unit
 pub fn Page::line(Self, Double, Double, Double, Double, Double) -> Unit
 pub fn Page::line_colored(Self, Double, Double, Double, Double, Double, Color) -> Unit
-pub fn Page::line_object(Self, Double, Double, Double, Double, Double) -> PathObject
 pub fn Page::measure_text(Self, String, Double) -> Double
-pub fn Page::object_count(Self) -> Int32
 pub fn Page::paragraph(Self, Double, Double, Double, Double, Double, String) -> Double
 pub fn Page::paragraph_aligned(Self, Double, Double, Double, Double, Double, Align, String) -> Double
 pub fn Page::path(Self, Double, Double, Double, Double, String, Double) -> Unit
-pub fn Page::path_object(Self, Double, Double, Double, Double, String, Double) -> PathObject
 pub fn Page::rect(Self, Double, Double, Double, Double, Double) -> Unit
-pub fn Page::rect_object(Self, Double, Double, Double, Double, Double) -> PathObject
 pub fn Page::table(Self, TableStyle, Array[Array[String]]) -> Double
 pub fn Page::text(Self, Double, Double, Double, String) -> Unit
 pub fn Page::text_aligned(Self, Double, Double, Double, Double, Align, String) -> Unit
 pub fn Page::text_at_offsets(Self, Double, Double, Double, String, Array[Double]) -> TextObject
 pub fn Page::text_justified(Self, Double, Double, Double, Double, String) -> Unit
-pub fn Page::text_object(Self, Double, Double, Double, String) -> TextObject
 pub fn Page::text_spaced(Self, Double, Double, Double, Double, String) -> Unit
 pub fn Page::text_with_font(Self, Double, Double, Double, Int32, String) -> TextObject
 pub fn Page::wrap_text(Self, String, Double, Double) -> Array[String]
@@ -262,6 +163,7 @@ pub struct TableStyle {
   header_fill : Color
   border_color : Color
   zebra_fill : Color?
+  zebra_offset : Int32
   text_offset : Double
 }
 pub fn TableStyle::new(Double, Double, Array[Double]) -> Self
@@ -291,21 +193,12 @@ pub struct TtfFace {
   tables : Array[TtfTable]
 }
 pub fn TtfFace::advance_width(Self, Int32) -> Int32
-pub fn TtfFace::cmap(Self) -> CmapSubtable?
 pub fn TtfFace::glyph_for_char(Self, Int32) -> Int32
-pub fn TtfFace::glyph_range(Self, Int32) -> (Int32, Int32)?
-pub fn TtfFace::index_to_loc_format(Self) -> Int32
 pub fn TtfFace::num_glyphs(Self) -> Int32
-pub fn TtfFace::number_of_hmetrics(Self) -> Int32
-pub fn TtfFace::table(Self, String) -> TtfTable?
 pub fn TtfFace::table_count(Self) -> Int32
 pub fn TtfFace::units_per_em(Self) -> Int32
 
-pub struct TtfTable {
-  tag : String
-  offset : Int32
-  length : Int32
-}
+type TtfTable
 
 pub struct VerifyCheck {
   name : String
@@ -320,49 +213,15 @@ pub fn VerifyReport::failures(Self) -> Array[VerifyCheck]
 pub fn VerifyReport::passed(Self) -> Bool
 pub fn VerifyReport::summary(Self) -> String
 
-pub struct Xml {
-  sb : StringBuilder
-  mut depth : Int32
-}
-pub fn Xml::close(Self, String) -> Unit
-pub fn Xml::declaration(Self) -> Unit
-pub fn Xml::empty(Self, String, Array[(String, String)]) -> Unit
-pub fn Xml::leaf(Self, String, Array[(String, String)], String) -> Unit
-pub fn Xml::new() -> Self
-pub fn Xml::open(Self, String, Array[(String, String)]) -> Unit
-pub fn Xml::to_string(Self) -> String
-
 pub struct ZipArchive {
   entries : Array[ZipEntryInfo]
   data : Bytes
 }
 pub fn ZipArchive::contains(Self, String) -> Bool
-pub fn ZipArchive::entry(Self, String) -> ZipEntryInfo?
 pub fn ZipArchive::names(Self) -> Array[String]
 pub fn ZipArchive::read(Self, String) -> Result[Bytes, String]
 
-type ZipEntry
-
-pub struct ZipEntryInfo {
-  name : String
-  compression : UInt32
-  crc : UInt32
-  compressed_size : Int32
-  uncompressed_size : Int32
-  local_offset : Int32
-}
-
-pub struct ZipWriter {
-  out : ByteBuf
-  entries : Array[ZipEntry]
-  mut finished : Bool
-}
-pub fn ZipWriter::add_directory(Self, String) -> Unit
-pub fn ZipWriter::add_file(Self, String, Bytes) -> Unit
-pub fn ZipWriter::entry_count(Self) -> Int32
-pub fn ZipWriter::finish(Self) -> Bytes
-pub fn ZipWriter::names(Self) -> Array[String]
-pub fn ZipWriter::new() -> Self
+type ZipEntryInfo
 
 // Type aliases
 

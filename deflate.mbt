@@ -13,14 +13,14 @@
 /// LSB-first bit writer. DEFLATE packs bits into bytes starting at the least
 /// significant bit; Huffman codes themselves are written most-significant bit
 /// first, which `write_huffman` handles.
-pub struct BitWriter {
+priv struct BitWriter {
   out : ByteBuf
   mut bits : UInt32
   mut count : Int32
 }
 
 ///|
-pub fn BitWriter::new() -> BitWriter {
+fn BitWriter::new() -> BitWriter {
   { out: ByteBuf::new(), bits: 0U, count: 0, }
 }
 
@@ -57,7 +57,7 @@ fn BitWriter::write_huffman(self : BitWriter, code : UInt32, n : Int32) -> Unit 
 }
 
 ///|
-pub fn BitWriter::flush(self : BitWriter) -> Bytes {
+fn BitWriter::flush(self : BitWriter) -> Bytes {
   if self.count > 0 {
     self.out.write_byte(self.bits.to_byte())
     self.bits = 0U
@@ -281,7 +281,7 @@ fn write_match(writer : BitWriter, length : Int32, distance : Int32) -> Unit {
 /// when the next position starts a longer match, the current byte is emitted as
 /// a literal instead. That single step is what keeps the ratio near zlib's on
 /// XML, where long matches usually start one byte late.
-pub fn deflate_raw(data : Bytes) -> Bytes {
+fn deflate_raw(data : Bytes) -> Bytes {
   let n = data.length()
   let writer = BitWriter::new()
   writer.write_bit(true) // BFINAL

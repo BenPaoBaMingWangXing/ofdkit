@@ -3,19 +3,19 @@
 
 ///|
 /// Path of the content stream for page `index`.
-pub fn page_content_path(index : Int32) -> String {
+fn page_content_path(index : Int32) -> String {
   "Doc_0/Pages/Page_\{index}/Content.xml"
 }
 
 ///|
 /// Path of an embedded font inside the package.
-pub fn font_file_path(font_id : Int32) -> String {
+fn font_file_path(font_id : Int32) -> String {
   "Doc_0/Res/Font_\{font_id}.ttf"
 }
 
 ///|
 /// File name of an image inside `Doc_0/Res`.
-pub fn image_file_name(id : Int32, format : ImageFormat) -> String {
+fn image_file_name(id : Int32, format : ImageFormat) -> String {
   let extension = match format {
     Png => "png"
     Jpeg => "jpg"
@@ -25,50 +25,8 @@ pub fn image_file_name(id : Int32, format : ImageFormat) -> String {
 
 ///|
 /// Path of an image inside the package.
-pub fn image_file_path(id : Int32, format : ImageFormat) -> String {
+fn image_file_path(id : Int32, format : ImageFormat) -> String {
   "Doc_0/Res/\{image_file_name(id, format)}"
-}
-
-///|
-/// Every file entry the package will contain, in write order. Directory
-/// records are added on top of these by `to_bytes`.
-pub fn Document::entry_names(doc : Document) -> Array[String] {
-  let names : Array[String] = ["OFD.xml", "Doc_0/Document.xml"]
-  if doc.fonts.length() > 0 {
-    names.push("Doc_0/PublicRes.xml")
-  }
-  for i, _ in doc.pages {
-    names.push(page_content_path(i))
-  }
-  for font in doc.fonts {
-    if font.data.length() > 0 {
-      names.push(font_file_path(font.id))
-    }
-  }
-  if doc.images.length() > 0 {
-    names.push("Doc_0/DocumentRes.xml")
-    for image in doc.images {
-      names.push(image_file_path(image.id, image.format))
-    }
-  }
-  names
-}
-
-///|
-/// Directory records the package must carry. OFD readers expect the archive to
-/// describe its own folder layout, not just the leaf files.
-pub fn Document::directory_names(doc : Document) -> Array[String] {
-  let dirs : Array[String] = ["Doc_0", "Doc_0/Pages"]
-  for i, _ in doc.pages {
-    dirs.push("Doc_0/Pages/Page_\{i}")
-  }
-  for font in doc.fonts {
-    if font.data.length() > 0 {
-      dirs.push("Doc_0/Res")
-      break
-    }
-  }
-  dirs
 }
 
 ///|

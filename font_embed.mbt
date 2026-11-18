@@ -7,7 +7,7 @@
 
 ///|
 /// Collect the distinct code points of `text`.
-pub fn code_points_of(text : String) -> Array[Int32] {
+fn code_points_of(text : String) -> Array[Int32] {
   let codes : Array[Int32] = []
   for ch in text {
     let code = ch.to_uint().reinterpret_as_int()
@@ -36,13 +36,4 @@ pub fn Document::embed_font_for_text(
     Ok(bytes) => bytes
   }
   Ok(self.add_embedded_font(name, subset))
-}
-
-///|
-/// Number of glyphs a font declares, useful for sanity checks before subsetting.
-pub fn font_glyph_count(font_bytes : Bytes) -> Result[Int32, String] {
-  match parse_ttf(font_bytes) {
-    Err(message) => Err(message)
-    Ok(face) => Ok(face.num_glyphs())
-  }
 }

@@ -30,7 +30,7 @@ fn minimal_sfnt() -> Bytes {
 
 ///|
 test "parse a minimal sfnt header" {
-  match @ofdkit.parse_ttf(minimal_sfnt()) {
+  match parse_ttf(minimal_sfnt()) {
     Err(message) => fail("expected a parseable font: \{message}")
     Ok(face) => {
       assert_eq(face.table_count(), 1)
@@ -42,7 +42,7 @@ test "parse a minimal sfnt header" {
 
 ///|
 test "reject a file that is too short" {
-  match @ofdkit.parse_ttf(b"abc") {
+  match parse_ttf(b"abc") {
     Err(_) => assert_true(true)
     Ok(_) => fail("three bytes cannot be a font")
   }
@@ -54,7 +54,7 @@ test "reject a font collection with an actionable message" {
     // "ttcf"
     0x74, 0x74, 0x63, 0x66, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
   ])
-  match @ofdkit.parse_ttf(collection) {
+  match parse_ttf(collection) {
     Err(message) => assert_true(message.contains("collection"))
     Ok(_) => fail("a .ttc must not be treated as a single face")
   }
@@ -65,7 +65,7 @@ test "reject an unsupported sfnt version" {
   let bogus = bytes_from([
     0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   ])
-  match @ofdkit.parse_ttf(bogus) {
+  match parse_ttf(bogus) {
     Err(message) => assert_true(message.contains("sfnt"))
     Ok(_) => fail("version 2.0 is not TrueType")
   }
@@ -73,7 +73,7 @@ test "reject an unsupported sfnt version" {
 
 ///|
 test "code points are collected once each in order" {
-  let codes = @ofdkit.code_points_of("中文AB中")
+  let codes = code_points_of("中文AB中")
   assert_eq(codes.length(), 4)
   // U+4E2D, U+6587, 'A', 'B'
   assert_eq(codes[0], 0x4E2D)
@@ -84,17 +84,32 @@ test "code points are collected once each in order" {
 
 ///|
 test "code points of an empty string is empty" {
-  assert_eq(@ofdkit.code_points_of("").length(), 0)
+  assert_eq(code_points_of("").length(), 0)
 }
 
 ///|
 test "subsetting a font without tables fails cleanly" {
-  match @ofdkit.parse_ttf(minimal_sfnt()) {
+  match parse_ttf(minimal_sfnt()) {
     Err(message) => fail("fixture should parse: \{message}")
     Ok(face) =>
-      match @ofdkit.subset_font(face, [0x41]) {
+      match subset_font_renumbered(face, [0x41]) {
         Err(message) => assert_true(message.contains("glyphs"))
         Ok(_) => fail("a font without maxp cannot be subset")
       }
+  }
+}
+
+///|
+test "reject a CFF-flavoured OpenType font with an actionable message" {
+  let ottf = bytes_from([
+    // "OTTO"
+    0x4F, 0x54, 0x54, 0x4F, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  ])
+  match parse_ttf(ottf) {
+    Err(message) => {
+      assert_true(message.contains(".otf"))
+      assert_true(message.contains(".ttf"))
+    }
+    Ok(_) => fail("a CFF-outline font has no glyf table and cannot be subset")
   }
 }

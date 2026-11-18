@@ -238,8 +238,47 @@ fn cmd_font_info(path : String) -> Unit {
 }
 
 ///|
+/// Parse a decimal number such as "5" or "4.2" from the command line.
+fn parse_size(text : String) -> Double? {
+  let trimmed = text.trim()
+  if trimmed.length() == 0 {
+    return None
+  }
+  let mut whole = 0.0
+  let mut fraction = 0.0
+  let mut scale = 1.0
+  let mut seen_dot = false
+  let mut seen_digit = false
+  for ch in trimmed {
+    if ch == '.' {
+      if seen_dot {
+        return None
+      }
+      seen_dot = true
+    } else if ch >= '0' && ch <= '9' {
+      let digit = (ch.to_uint() - '0'.to_uint())
+        .reinterpret_as_int()
+        .to_double()
+      if seen_dot {
+        scale = scale / 10.0
+        fraction = fraction + digit * scale
+      } else {
+        whole = whole * 10.0 + digit
+      }
+      seen_digit = true
+    } else {
+      return None
+    }
+  }
+  if !seen_digit {
+    return None
+  }
+  Some(whole + fraction)
+}
+
+///|
 fn cmd_measure(font_path : String, size_text : String, text : String) -> Unit {
-  let size = match @ofdkit.parse_double(size_text) {
+  let size = match parse_size(size_text) {
     None => {
       println("字号无法解析: \{size_text}")
       return

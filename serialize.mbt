@@ -34,7 +34,7 @@ fn box_attr(width : Double, height : Double) -> String {
 
 ///|
 /// Serialise `OFD.xml`, the archive entry point.
-pub fn serialize_ofd_xml(doc : Document) -> String {
+fn serialize_ofd_xml(doc : Document) -> String {
   let xml = Xml::new()
   xml.declaration()
   xml.open("ofd:OFD", [
@@ -68,7 +68,7 @@ pub fn serialize_ofd_xml(doc : Document) -> String {
 
 ///|
 /// Serialise `Document.xml`, which lists the pages and points at resources.
-pub fn serialize_document(doc : Document) -> String {
+fn serialize_document(doc : Document) -> String {
   let xml = Xml::new()
   xml.declaration()
   xml.open("ofd:Document", [("xmlns:ofd", OFD_NS)])
@@ -119,7 +119,7 @@ pub fn serialize_document(doc : Document) -> String {
 
 ///|
 /// Serialise `PublicRes.xml`, the shared resource dictionary (fonts).
-pub fn serialize_public_res(doc : Document) -> String {
+fn serialize_public_res(doc : Document) -> String {
   let xml = Xml::new()
   xml.declaration()
   xml.open("ofd:Res", [("xmlns:ofd", OFD_NS), ("BaseLoc", "Res")])
@@ -219,7 +219,7 @@ fn serialize_image_object(xml : Xml, obj : ImageObject) -> Unit {
 
 ///|
 /// Serialise `DocumentRes.xml`, the document-level resource dictionary.
-pub fn serialize_document_res(doc : Document) -> String {
+fn serialize_document_res(doc : Document) -> String {
   let xml = Xml::new()
   xml.declaration()
   xml.open("ofd:DocumentRes", [("xmlns:ofd", OFD_NS), ("BaseLoc", "Res")])
@@ -242,7 +242,7 @@ pub fn serialize_document_res(doc : Document) -> String {
 
 ///|
 /// Serialise one page's `Content.xml`.
-pub fn serialize_content(page : Page) -> String {
+fn serialize_content(page : Page) -> String {
   let xml = Xml::new()
   xml.declaration()
   xml.open("ofd:Page", [("xmlns:ofd", OFD_NS)])

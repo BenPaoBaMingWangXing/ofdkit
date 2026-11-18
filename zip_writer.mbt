@@ -8,7 +8,7 @@
 /// stays dependency free.
 
 ///|
-struct ZipEntry {
+priv struct ZipEntry {
   name : String
   crc : UInt32
   /// Compressed size written to the header.
@@ -22,14 +22,14 @@ struct ZipEntry {
 }
 
 ///|
-pub struct ZipWriter {
+priv struct ZipWriter {
   out : ByteBuf
   entries : Array[ZipEntry]
   mut finished : Bool
 }
 
 ///|
-pub fn ZipWriter::new() -> ZipWriter {
+fn ZipWriter::new() -> ZipWriter {
   { out: ByteBuf::new(), entries: [], finished: false, }
 }
 
@@ -53,11 +53,7 @@ const COMPRESS_MIN_SIZE : Int32 = 64
 ///
 /// The payload is compressed with DEFLATE only when the result is strictly
 /// smaller than the input; readers see the same bytes either way.
-pub fn ZipWriter::add_file(
-  self : ZipWriter,
-  name : String,
-  data : Bytes,
-) -> Unit {
+fn ZipWriter::add_file(self : ZipWriter, name : String, data : Bytes) -> Unit {
   if self.finished {
     abort("ZipWriter: cannot add a file after finish()")
   }
@@ -103,7 +99,7 @@ pub fn ZipWriter::add_file(
 ///|
 /// Append a directory entry. OFD packages carry explicit directory records
 /// (`Doc_0/`, `Doc_0/Pages/`, ...); some readers rely on them being present.
-pub fn ZipWriter::add_directory(self : ZipWriter, name : String) -> Unit {
+fn ZipWriter::add_directory(self : ZipWriter, name : String) -> Unit {
   if self.finished {
     abort("ZipWriter: cannot add a directory after finish()")
   }
@@ -134,21 +130,9 @@ pub fn ZipWriter::add_directory(self : ZipWriter, name : String) -> Unit {
 }
 
 ///|
-/// Number of files added so far.
-pub fn ZipWriter::entry_count(self : ZipWriter) -> Int32 {
-  self.entries.length()
-}
-
-///|
-/// Names of the files added so far, in insertion order.
-pub fn ZipWriter::names(self : ZipWriter) -> Array[String] {
-  self.entries.map(fn(entry) { entry.name })
-}
-
-///|
 /// Write the central directory and end-of-central-directory record, then
 /// return the complete archive.
-pub fn ZipWriter::finish(self : ZipWriter) -> Bytes {
+fn ZipWriter::finish(self : ZipWriter) -> Bytes {
   if self.finished {
     abort("ZipWriter: finish() called twice")
   }

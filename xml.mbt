@@ -6,13 +6,13 @@
 /// in one place so no caller can forget it.
 
 ///|
-pub struct Xml {
+priv struct Xml {
   sb : StringBuilder
   mut depth : Int32
 }
 
 ///|
-pub fn Xml::new() -> Xml {
+fn Xml::new() -> Xml {
   { sb: StringBuilder(), depth: 0, }
 }
 
@@ -30,7 +30,7 @@ fn Xml::newline(self : Xml) -> Unit {
 
 ///|
 /// Escape a string for use in XML text or a double-quoted attribute value.
-pub fn xml_escape(value : String) -> String {
+fn xml_escape(value : String) -> String {
   let out = StringBuilder()
   for ch in value {
     match ch {
@@ -59,12 +59,12 @@ fn Xml::write_attrs(self : Xml, attrs : Array[(String, String)]) -> Unit {
 
 ///|
 /// Emit the XML declaration. Call once, before anything else.
-pub fn Xml::declaration(self : Xml) -> Unit {
+fn Xml::declaration(self : Xml) -> Unit {
   self.sb.write_stringview("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
 }
 
 ///|
-pub fn Xml::open(
+fn Xml::open(
   self : Xml,
   name : String,
   attrs : Array[(String, String)],
@@ -79,7 +79,7 @@ pub fn Xml::open(
 }
 
 ///|
-pub fn Xml::close(self : Xml, name : String) -> Unit {
+fn Xml::close(self : Xml, name : String) -> Unit {
   self.depth = self.depth - 1
   self.indent()
   self.sb.write_stringview("</")
@@ -90,7 +90,7 @@ pub fn Xml::close(self : Xml, name : String) -> Unit {
 
 ///|
 /// A self-closing element.
-pub fn Xml::empty(
+fn Xml::empty(
   self : Xml,
   name : String,
   attrs : Array[(String, String)],
@@ -105,7 +105,7 @@ pub fn Xml::empty(
 
 ///|
 /// An element whose body is a single text node.
-pub fn Xml::leaf(
+fn Xml::leaf(
   self : Xml,
   name : String,
   attrs : Array[(String, String)],
@@ -124,6 +124,6 @@ pub fn Xml::leaf(
 }
 
 ///|
-pub fn Xml::to_string(self : Xml) -> String {
+fn Xml::to_string(self : Xml) -> String {
   self.sb.to_string()
 }

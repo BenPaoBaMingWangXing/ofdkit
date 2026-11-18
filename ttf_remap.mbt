@@ -309,7 +309,7 @@ fn patch_maxp(face : TtfFace, num_glyphs : Int32) -> Bytes? {
 ///|
 /// Subset `face` down to `code_points`, renumbering glyphs so tables are sized
 /// for what is kept rather than for the whole font.
-pub fn subset_font_renumbered(
+fn subset_font_renumbered(
   face : TtfFace,
   code_points : Array[Int32],
 ) -> Result[Bytes, String] {

@@ -9,14 +9,14 @@
 
 ///|
 /// LSB-first bit reader with a small lookahead.
-pub struct BitReader {
+priv struct BitReader {
   data : Bytes
   mut pos : Int32
   mut bit : Int32
 }
 
 ///|
-pub fn BitReader::new(data : Bytes) -> BitReader {
+fn BitReader::new(data : Bytes) -> BitReader {
   { data, pos: 0, bit: 0, }
 }
 
@@ -143,7 +143,7 @@ fn distance_base(code : Int32) -> (Int32, Int32) {
 ///|
 /// Inflate a raw DEFLATE stream. Returns an error string for the block types
 /// this reader does not implement.
-pub fn inflate_raw(data : Bytes) -> Result[Bytes, String] {
+fn inflate_raw(data : Bytes) -> Result[Bytes, String] {
   let reader = BitReader::new(data)
   let out = ByteBuf::new()
   let mut last = false

@@ -208,13 +208,3 @@ fn assemble_sfnt(tables : Array[OutTable]) -> Bytes {
   header.write_bytes(body.to_bytes())
   header.to_bytes()
 }
-
-///|
-/// Build a subset font that can render exactly `code_points` (plus whatever
-/// glyphs those need as composite components).
-pub fn subset_font(
-  face : TtfFace,
-  code_points : Array[Int32],
-) -> Result[Bytes, String] {
-  subset_font_renumbered(face, code_points)
-}

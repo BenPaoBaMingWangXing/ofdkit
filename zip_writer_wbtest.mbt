@@ -9,7 +9,7 @@ fn peek_u32(data : Bytes, offset : Int32) -> UInt32 {
 
 ///|
 test "zip starts with a local file header signature" {
-  let zw = @ofdkit.ZipWriter::new()
+  let zw = ZipWriter::new()
   zw.add_file("OFD.xml", b"<OFD/>")
   let archive = zw.finish()
   assert_eq(peek_u32(archive, 0), 0x04034B50U)
@@ -17,7 +17,7 @@ test "zip starts with a local file header signature" {
 
 ///|
 test "zip ends with an end-of-central-directory signature" {
-  let zw = @ofdkit.ZipWriter::new()
+  let zw = ZipWriter::new()
   zw.add_file("a.txt", b"hello")
   let archive = zw.finish()
   let len = archive.length()
@@ -26,11 +26,15 @@ test "zip ends with an end-of-central-directory signature" {
 
 ///|
 test "zip records the entry count" {
-  let zw = @ofdkit.ZipWriter::new()
+  let zw = ZipWriter::new()
   zw.add_file("OFD.xml", b"<OFD/>")
   zw.add_file("Doc_0/Document.xml", b"<Document/>")
-  assert_eq(zw.entry_count(), 2)
   let archive = zw.finish()
+  let entries = match parse_zip(archive) {
+    Ok(parsed) => parsed.names().length()
+    Err(_) => -1
+  }
+  assert_eq(entries, 2)
   let len = archive.length()
   // Total entries live at EOCD + 10.
   let total = archive[len - 12].to_uint() | (archive[len - 11].to_uint() << 8)
@@ -39,7 +43,7 @@ test "zip records the entry count" {
 
 ///|
 test "stored entry payload is byte identical" {
-  let zw = @ofdkit.ZipWriter::new()
+  let zw = ZipWriter::new()
   let payload : Bytes = b"stored payload"
   zw.add_file("x.bin", payload)
   let archive = zw.finish()

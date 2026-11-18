@@ -13,9 +13,9 @@ fn sample_text() -> Bytes {
 ///|
 test "deflate produces a stream the inflater can read back" {
   let original = sample_text()
-  let packed = @ofdkit.deflate_raw(original)
+  let packed = deflate_raw(original)
   assert_true(packed.length() < original.length())
-  match @ofdkit.inflate_raw(packed) {
+  match inflate_raw(packed) {
     Err(message) => fail("inflate failed: \{message}")
     Ok(restored) =>
       assert_eq(@utf8.decode_lossy(restored), @utf8.decode_lossy(original))
@@ -25,10 +25,10 @@ test "deflate produces a stream the inflater can read back" {
 ///|
 test "deflate handles highly repetitive input" {
   let original = @utf8.encode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-  let packed = @ofdkit.deflate_raw(original)
+  let packed = deflate_raw(original)
   // A run of one repeated byte should collapse to a handful of bytes.
   assert_true(packed.length() < 16)
-  match @ofdkit.inflate_raw(packed) {
+  match inflate_raw(packed) {
     Err(message) => fail("inflate failed: \{message}")
     Ok(restored) =>
       assert_eq(@utf8.decode_lossy(restored), @utf8.decode_lossy(original))
@@ -38,8 +38,8 @@ test "deflate handles highly repetitive input" {
 ///|
 test "deflate handles input shorter than the minimum match" {
   let original : Bytes = b"ab"
-  let packed = @ofdkit.deflate_raw(original)
-  match @ofdkit.inflate_raw(packed) {
+  let packed = deflate_raw(original)
+  match inflate_raw(packed) {
     Err(message) => fail("inflate failed: \{message}")
     Ok(restored) =>
       assert_eq(@utf8.decode_lossy(restored), @utf8.decode_lossy(original))
@@ -49,8 +49,8 @@ test "deflate handles input shorter than the minimum match" {
 ///|
 test "deflate handles binary bytes including zero" {
   let original = bytes_from([0, 0, 0, 255, 128, 7, 0, 0, 255, 255, 0, 1, 2, 3])
-  let packed = @ofdkit.deflate_raw(original)
-  match @ofdkit.inflate_raw(packed) {
+  let packed = deflate_raw(original)
+  match inflate_raw(packed) {
     Err(message) => fail("inflate failed: \{message}")
     Ok(restored) => assert_eq(restored.length(), original.length())
   }
@@ -58,7 +58,7 @@ test "deflate handles binary bytes including zero" {
 
 ///|
 test "zip writer compresses a compressible entry" {
-  let zw = @ofdkit.ZipWriter::new()
+  let zw = ZipWriter::new()
   let payload = sample_text()
   zw.add_file("Doc_0/Pages/Page_0/Content.xml", payload)
   let archive = zw.finish()
@@ -81,7 +81,7 @@ test "zip writer compresses a compressible entry" {
 
 ///|
 test "zip writer leaves a small entry stored" {
-  let zw = @ofdkit.ZipWriter::new()
+  let zw = ZipWriter::new()
   zw.add_file("t.txt", b"hi")
   let archive = zw.finish()
   let compression = archive[8].to_uint() | (archive[9].to_uint() << 8)
@@ -90,12 +90,12 @@ test "zip writer leaves a small entry stored" {
 
 ///|
 test "compressed archive survives the verifier read path" {
-  let zw = @ofdkit.ZipWriter::new()
+  let zw = ZipWriter::new()
   let payload = sample_text()
   zw.add_file("a.xml", payload)
   zw.add_file("tiny.bin", b"x")
   let archive = zw.finish()
-  let parsed = match @ofdkit.parse_zip(archive) {
+  let parsed = match parse_zip(archive) {
     Ok(a) => a
     Err(message) => abort(message)
   }
@@ -127,9 +127,9 @@ test "deflate round trips every byte value" {
     }
   }
   let original = bytes_from(doubled)
-  let packed = @ofdkit.deflate_raw(original)
+  let packed = deflate_raw(original)
   assert_true(packed.length() < original.length())
-  match @ofdkit.inflate_raw(packed) {
+  match inflate_raw(packed) {
     Err(message) => fail("inflate failed: \{message}")
     Ok(restored) => {
       assert_eq(restored.length(), original.length())

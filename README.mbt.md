@@ -27,7 +27,7 @@ OFD（Open Fixed-layout Document，开放式版式文档）是国家标准 **GB/
 - **字间距**：`page.text_spaced()` 逐字定位，`page.text_justified()` 按框宽撑满
 - **文档大纲**：`doc.add_outline()` 写入阅读器的书签树，支持层级
 - 文档元数据：标题、作者、主题、关键词、创建日期
-- 结构自校验：`ofdkit verify` 会重新解析生成的包，16 项检查覆盖必需文件、引用、对象 ID 上限、字体可解析性、图片格式、大纲目标
+- 结构自校验：`ofdkit verify` 会重新解析生成的包，17 项检查覆盖必需文件、引用、对象 ID 上限、字体可解析性、图片格式、大纲目标，以及**每一页画出来的字符是否都在字体子集里**（缺字会渲染成方框，任何纯结构检查都看不见）
 - **跨平台码点**：`cmap` 同时写 format 4（BMP）与 format 12（增补平面），生僻字与 emoji 也能进子集
 
 ## 现在不能做什么
@@ -40,6 +40,8 @@ OFD（Open Fixed-layout Document，开放式版式文档）是国家标准 **GB/
 - **不支持渐变、透明度、裁剪路径**。图形只有纯色描边与填充，`CGTransform` 与 `Clip` 未实现。
 - **压缩用固定 Huffman 单块**：比 zlib `-9` 大约差 6%~14%（示例包 32.5 KB vs 30.2 KB）。动态 Huffman 需要码长树构建与传输，收益不足以抵消复杂度。
 - **位图只认 PNG / JPEG**。JBIG2、CCITT G4、JPEG 2000 这类 OFD 允许的格式没有写入口。
+- **字体只认 TrueType 轮廓**。`.otf`（CFF/PostScript 轮廓）与 `.ttc`（字体集合）会被明确拒绝——没有 `glyf` 表可复制，硬做只会产出空字形。
+- **表格列宽要自己算**。`TableStyle` 按给定的列宽画，没有"按内容自动分配"；列宽给窄了就截断补省略号。
 
 ## 安装
 
@@ -53,7 +55,7 @@ moon add BenPaoBaMingWangXing/ofdkit
 
 ```mbt nocheck
 ///|
-fn build_report() -> Bytes {
+fn build_report() -> Result[Bytes, String] {
   let doc = @ofdkit.Document::new()
     .set_title("月度报表")
     .set_author("财务部")
@@ -65,6 +67,8 @@ fn build_report() -> Bytes {
   doc.to_bytes()
 }
 ```
+
+`to_bytes()` 返回 `Result`：一页都没加就想打包，是调用方的错误，库不该为此让整个进程崩掉。
 
 坐标单位统一为**毫米**，原点在页面左上角，Y 轴向下——与标准一致，调用方不需要做任何单位换算。
 
@@ -107,11 +111,12 @@ moon run cmd/main -- font-info C:/Windows/Fonts/simhei.ttf
   通过  PublicRes resolves  (Doc_0/PublicRes.xml)
   通过  declared font files are packaged  (1 font file(s))
   通过  embedded fonts are readable  (Font_1.ttf: 110 glyphs)
+  通过  every drawn character is embedded  (276 character(s) covered)
   通过  DocumentRes resolves  (Doc_0/DocumentRes.xml)
   通过  declared images are packaged  (1 image(s))
   通过  images are PNG or JPEG  (1 image(s))
 
-16/16 checks passed
+17/17 checks passed
 ```
 
 ## 包结构
@@ -305,7 +310,7 @@ let next_y = page.paragraph(
 moon test
 ```
 
-91 个测试，覆盖 CRC-32 标准向量、ZIP 结构、DEFLATE 往返、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径、文本度量与换行、表格几何、对齐与两端对齐、字间距、图片格式嗅探、大纲目标解析、跨页分页，以及若干负例（截断归档、缺页面流、字体文件不是字体、图片魔数不对）。
+97 个测试，覆盖 CRC-32 标准向量、ZIP 结构、DEFLATE 往返、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径、文本度量与换行、表格几何、对齐与两端对齐、字间距、图片格式嗅探、大纲目标解析、跨页分页，以及负例：截断归档、缺页面流、字体文件不是字体、图片魔数不对、大纲指向不存在的页、**子集里查不到画出来的字**、空文档打包、CFF 字体被拒。
 
 ## 路线图
 

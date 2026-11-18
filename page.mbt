@@ -180,7 +180,7 @@ pub fn Page::text(
 
 ///|
 /// Like `text`, but returns the object so callers can adjust it.
-pub fn Page::text_object(
+fn Page::text_object(
   self : Page,
   x : Double,
   y : Double,
@@ -299,7 +299,7 @@ pub fn Page::line(
 }
 
 ///|
-pub fn Page::line_object(
+fn Page::line_object(
   self : Page,
   x1 : Double,
   y1 : Double,
@@ -370,7 +370,7 @@ pub fn Page::rect(
 }
 
 ///|
-pub fn Page::rect_object(
+fn Page::rect_object(
   self : Page,
   x : Double,
   y : Double,
@@ -407,7 +407,7 @@ pub fn Page::fill_rect(
 }
 
 ///|
-pub fn Page::fill_rect_object(
+fn Page::fill_rect_object(
   self : Page,
   x : Double,
   y : Double,
@@ -445,7 +445,7 @@ pub fn Page::path(
 }
 
 ///|
-pub fn Page::path_object(
+fn Page::path_object(
   self : Page,
   x : Double,
   y : Double,
@@ -487,9 +487,4 @@ pub fn Page::image(
     resource_id,
   }
   self.objects.push(Image(obj))
-}
-
-///|
-pub fn Page::object_count(self : Page) -> Int32 {
-  self.objects.length()
 }

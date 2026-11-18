@@ -3,6 +3,35 @@
 All notable changes to ofdkit are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.9.0
+
+Hardening pass: the library stops panicking, its public surface shrinks by
+half, and the verifier learns to catch the failure that structure checks cannot
+see.
+
+- **BREAKING: `Document::to_bytes` returns `Result[Bytes, String]`.** An empty
+  document used to `abort`, which takes the whole process down in wasm. A caller
+  mistake is now a value, not a trap.
+- **`verify_ofd` checks glyph coverage.** It parses every `TextCode` in every
+  content stream and looks each character up in the embedded subset's `cmap`.
+  A missing glyph renders as a blank box, which no structural check can detect;
+  the report now names the offending characters. 17 checks total.
+- **Public API cut from 162 symbols to 82.** `ByteBuf`, `BitWriter`,
+  `BitReader`, `Crc32`, `Xml`, `ZipWriter`, `ZipEntry`, `CmapSubtable`,
+  `TtfTable`, `ZipEntryInfo`, the serializers, the path builders and the
+  subsetters became package-private. What stays public is what a caller can
+  reasonably want: the document model, the drawing API, table styling, the
+  verifier, and read-only diagnostics (`parse_zip`, `parse_ttf`).
+- **Zebra striping keeps its parity across page breaks.** `TableStyle` gained
+  `zebra_offset`, which `table_across_pages` advances per page; a repeated
+  header never joins the stripe.
+- **`.otf` (CFF outlines) and `.ttc` fail with an actionable message** instead
+  of a hex sfnt version. There is no `glyf` table to copy, so subsetting them
+  could only produce empty glyphs.
+- Sharpened a weak test: the border-colour case now asserts all five rules
+  carry the configured colour instead of "at least one did".
+- 97 tests.
+
 ## 0.8.2
 
 - Documentation only: contact address in the proposal.

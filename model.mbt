@@ -66,16 +66,6 @@ pub struct Font {
 }
 
 ///|
-pub fn Font::named(id : Int32, name : String) -> Font {
-  { id, name, family: name, data: Bytes::new(0), }
-}
-
-///|
-pub fn Font::embedded(id : Int32, name : String, data : Bytes) -> Font {
-  { id, name, family: name, data, }
-}
-
-///|
 pub struct TextObject {
   id : Int32
   boundary : Rect
@@ -237,7 +227,7 @@ pub fn Document::set_creation_date(self : Document, date : String) -> Document {
 
 ///|
 /// Allocate a document-unique object id.
-pub fn Document::alloc_id(self : Document) -> Int32 {
+fn Document::alloc_id(self : Document) -> Int32 {
   let id = self.next_id
   self.next_id = self.next_id + 1
   id
@@ -300,7 +290,7 @@ fn Document::default_face(self : Document) -> TtfFace? {
 ///|
 /// Identify a raster image by its magic bytes. OFD stores the original bytes,
 /// so the only thing the writer needs to know is which decoder to ask for.
-pub fn detect_image_format(data : Bytes) -> Result[ImageFormat, String] {
+fn detect_image_format(data : Bytes) -> Result[ImageFormat, String] {
   if data.length() >= 8 &&
     data[0] == b'\x89' &&
     data[1] == b'\x50' &&
@@ -358,13 +348,6 @@ pub fn Document::add_outline(
 /// Number of outline entries.
 pub fn Document::outline_count(self : Document) -> Int32 {
   self.outlines.length()
-}
-
-///|
-/// Font id that new pages will use. Zero means the document has no embedded
-/// font, and pages fall back to a named system font.
-pub fn Document::primary_font_id(self : Document) -> Int32 {
-  self.primary_font
 }
 
 ///|
@@ -431,7 +414,7 @@ fn object_id(obj : DrawObject) -> Int32 {
 /// Largest object id in the document, which is what `MaxUnitID` must report.
 /// Page objects are numbered in blocks, so this is not simply the document
 /// counter.
-pub fn Document::max_unit_id(self : Document) -> Int32 {
+fn Document::max_unit_id(self : Document) -> Int32 {
   let mut max = self.next_id
   for page in self.pages {
     for obj in page.objects {

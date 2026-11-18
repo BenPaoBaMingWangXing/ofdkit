@@ -7,7 +7,7 @@
 /// shelling out to another tool.
 
 ///|
-pub struct ZipEntryInfo {
+struct ZipEntryInfo {
   name : String
   compression : UInt32
   crc : UInt32
@@ -131,7 +131,7 @@ pub fn ZipArchive::contains(self : ZipArchive, name : String) -> Bool {
 }
 
 ///|
-pub fn ZipArchive::entry(self : ZipArchive, name : String) -> ZipEntryInfo? {
+fn ZipArchive::entry(self : ZipArchive, name : String) -> ZipEntryInfo? {
   for entry in self.entries {
     if entry.name == name {
       return Some(entry)

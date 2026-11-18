@@ -10,7 +10,7 @@
 
 ///|
 /// One entry from the font's table directory.
-pub struct TtfTable {
+struct TtfTable {
   tag : String
   offset : Int32
   length : Int32
@@ -70,6 +70,13 @@ pub fn parse_ttf(data : Bytes) -> Result[TtfFace, String] {
       "TrueType collections (.ttc) are not supported; extract a single face first",
     )
   }
+  if version == 0x4F54544F {
+    // "OTTO": OpenType with CFF (PostScript) outlines. There is no `glyf` table
+    // to copy, so subsetting would silently produce empty glyphs.
+    return Err(
+      "OpenType CFF outlines (.otf) are not supported; use a font with TrueType outlines (.ttf)",
+    )
+  }
   if version != 0x00010000 && version != 0x74727565 {
     // 0x74727565 == "true"
     return Err(
@@ -98,7 +105,7 @@ pub fn TtfFace::table_count(self : TtfFace) -> Int32 {
 }
 
 ///|
-pub fn TtfFace::table(self : TtfFace, tag : String) -> TtfTable? {
+fn TtfFace::table(self : TtfFace, tag : String) -> TtfTable? {
   for table in self.tables {
     if table.tag == tag {
       return Some(table)
@@ -126,7 +133,7 @@ pub fn TtfFace::num_glyphs(self : TtfFace) -> Int32 {
 
 ///|
 /// 0 for short `loca` offsets (u16, halved), 1 for long (u32).
-pub fn TtfFace::index_to_loc_format(self : TtfFace) -> Int32 {
+fn TtfFace::index_to_loc_format(self : TtfFace) -> Int32 {
   match self.table("head") {
     Some(head) => be_i16(self.data, head.offset + 50)
     None => 0
@@ -134,7 +141,7 @@ pub fn TtfFace::index_to_loc_format(self : TtfFace) -> Int32 {
 }
 
 ///|
-pub fn TtfFace::number_of_hmetrics(self : TtfFace) -> Int32 {
+fn TtfFace::number_of_hmetrics(self : TtfFace) -> Int32 {
   match self.table("hhea") {
     Some(hhea) => be_u16(self.data, hhea.offset + 34)
     None => 0
@@ -143,7 +150,7 @@ pub fn TtfFace::number_of_hmetrics(self : TtfFace) -> Int32 {
 
 ///|
 /// Byte range of glyph `id` inside `glyf`, or `None` when the glyph is empty.
-pub fn TtfFace::glyph_range(self : TtfFace, id : Int32) -> (Int32, Int32)? {
+fn TtfFace::glyph_range(self : TtfFace, id : Int32) -> (Int32, Int32)? {
   let loca = match self.table("loca") {
     Some(table) => table
     None => return None

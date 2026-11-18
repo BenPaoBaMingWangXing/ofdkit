@@ -16,13 +16,13 @@ fn jpeg_magic_bytes() -> Bytes {
 
 ///|
 test "png is recognised by its magic bytes" {
-  match @ofdkit.detect_image_format(png_magic_bytes()) {
+  match detect_image_format(png_magic_bytes()) {
     Err(message) => fail("expected PNG: \{message}")
     Ok(format) =>
       assert_true(
         match format {
-          @ofdkit.Png => true
-          @ofdkit.Jpeg => false
+          Png => true
+          Jpeg => false
         },
       )
   }
@@ -30,13 +30,13 @@ test "png is recognised by its magic bytes" {
 
 ///|
 test "jpeg is recognised by its magic bytes" {
-  match @ofdkit.detect_image_format(jpeg_magic_bytes()) {
+  match detect_image_format(jpeg_magic_bytes()) {
     Err(message) => fail("expected JPEG: \{message}")
     Ok(format) =>
       assert_true(
         match format {
-          @ofdkit.Png => false
-          @ofdkit.Jpeg => true
+          Png => false
+          Jpeg => true
         },
       )
   }
@@ -44,7 +44,7 @@ test "jpeg is recognised by its magic bytes" {
 
 ///|
 test "garbage is rejected" {
-  match @ofdkit.detect_image_format(b"GIF89a not supported") {
+  match detect_image_format(b"GIF89a not supported") {
     Err(_) => assert_true(true)
     Ok(_) => fail("GIF must not be accepted")
   }
@@ -52,13 +52,16 @@ test "garbage is rejected" {
 
 ///|
 test "adding an image registers a resource and a package entry" {
-  let doc = @ofdkit.Document::new()
+  let doc = Document::new()
   let id = match doc.add_image(png_magic_bytes()) {
     Err(message) => fail("expected the image to register: \{message}")
     Ok(id) => id
   }
   ignore(doc.add_page())
-  let names = doc.entry_names()
+  let names = match parse_zip(pack(doc)) {
+    Ok(archive) => archive.names()
+    Err(message) => abort(message)
+  }
   let mut has_res = false
   let mut has_image = false
   for name in names {
@@ -77,14 +80,14 @@ test "adding an image registers a resource and a package entry" {
 
 ///|
 test "content stream references the image resource" {
-  let doc = @ofdkit.Document::new()
+  let doc = Document::new()
   let id = match doc.add_image(png_magic_bytes()) {
     Err(message) => fail("fixture: \{message}")
     Ok(id) => id
   }
   let page = doc.add_page()
   page.image(10.0, 10.0, 40.0, 20.0, id)
-  let xml = @ofdkit.serialize_content(page)
+  let xml = serialize_content(page)
   assert_true(xml.contains("<ofd:ImageObject"))
   assert_true(xml.contains("ResourceID=\"\{id}\""))
   // CTM maps the unit square onto the 40x20 mm box.
@@ -93,25 +96,25 @@ test "content stream references the image resource" {
 
 ///|
 test "document resources declare the subtype and file name" {
-  let doc = @ofdkit.Document::new()
+  let doc = Document::new()
   let id = match doc.add_image(jpeg_magic_bytes()) {
     Err(message) => fail("fixture: \{message}")
     Ok(id) => id
   }
-  let xml = @ofdkit.serialize_document_res(doc)
+  let xml = serialize_document_res(doc)
   assert_true(xml.contains("Subtype=\"JPEG\""))
   assert_true(xml.contains("Image_\{id}.jpg"))
 }
 
 ///|
 test "a document with an image verifies" {
-  let doc = @ofdkit.Document::new()
+  let doc = Document::new()
   let id = match doc.add_image(png_magic_bytes()) {
     Err(message) => fail("fixture: \{message}")
     Ok(id) => id
   }
   let page = doc.add_page()
   page.image(10.0, 10.0, 40.0, 20.0, id)
-  let report = @ofdkit.verify_ofd(pack(doc))
+  let report = verify_ofd(pack(doc))
   assert_true(report.passed())
 }

@@ -206,6 +206,7 @@ fn xml_unescape(text : String) -> String {
 }
 
 ///|
+
 ///|
 /// Verify an OFD package held in memory.
 pub fn verify_ofd(data : Bytes) -> VerifyReport {
@@ -387,15 +388,11 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
               // structural check can see that, so check it here.
               if font_files.length() == 0 {
                 report.add(
-                  "every drawn character is embedded",
-                  true,
-                  "no embedded font; the reader falls back to a system font",
+                  "every drawn character is embedded", true, "no embedded font; the reader falls back to a system font",
                 )
               } else if !fonts_ok {
                 report.add(
-                  "every drawn character is embedded",
-                  false,
-                  "font files could not be parsed",
+                  "every drawn character is embedded", false, "font files could not be parsed",
                 )
               } else {
                 let doc_dir = parent_dir(doc_root)
@@ -416,8 +413,8 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
                           let mut covered = false
                           for face in faces {
                             if face.glyph_for_char(
-                              ch.to_uint().reinterpret_as_int(),
-                            ) !=
+                                ch.to_uint().reinterpret_as_int(),
+                              ) !=
                               0 {
                               covered = true
                             }
@@ -442,7 +439,11 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
                   )
                 } else {
                   let sample = StringBuilder()
-                  let limit = if missing.length() < 8 { missing.length() } else { 8 }
+                  let limit = if missing.length() < 8 {
+                    missing.length()
+                  } else {
+                    8
+                  }
                   for i in 0..<limit {
                     if i > 0 {
                       sample.write_char(' ')

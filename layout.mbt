@@ -130,6 +130,9 @@ pub struct TableStyle {
   border_color : Color
   /// Fill applied to every second body row, for readability. `None` disables it.
   zebra_fill : Color?
+  /// Absolute row number of `rows[0]`. `table_across_pages` advances it so the
+  /// stripe parity continues from one page to the next instead of restarting.
+  zebra_offset : Int32
   /// Vertical offset of the text baseline inside a row.
   text_offset : Double
 }
@@ -153,6 +156,7 @@ pub fn TableStyle::new(
     header_fill: Color::new(235, 238, 245),
     border_color: Color::new(150, 155, 165),
     zebra_fill: None,
+    zebra_offset: 0,
     text_offset: 4.75,
   }
 }
@@ -251,9 +255,11 @@ pub fn Page::table(
   // Zebra fills under the rules as well.
   match style.zebra_fill {
     Some(fill) => {
-      let mut row = if style.header { 1 } else { 0 }
+      let mut row = 0
       while row < rows.length() {
-        if row % 2 == 1 {
+        // A repeated header keeps the header fill; it never joins the stripe.
+        let is_header = style.header && row == 0
+        if !is_header && (style.zebra_offset + row) % 2 == 1 {
           self.fill_rect(
             style.x,
             style.y + style.row_height * row.to_double(),
@@ -414,6 +420,8 @@ pub fn Document::table_across_pages(
   let mut current = page
   let mut cursor = style.y
   let mut index = body_start
+  // Body rows already drawn on earlier pages; keeps the zebra parity unbroken.
+  let mut drawn_rows = 0
   while index < rows.length() {
     // Every page carries the header, so body capacity is one row less.
     let available = current.height - TABLE_PAGE_BOTTOM - cursor
@@ -434,8 +442,9 @@ pub fn Document::table_across_pages(
     for i in 0..<take {
       block.push(rows[index + i])
     }
-    let block_style = { ..style, y: cursor, }
+    let block_style = { ..style, y: cursor, zebra_offset: drawn_rows, }
     cursor = current.table(block_style, block)
+    drawn_rows = drawn_rows + take
     index = index + take
     if index < rows.length() {
       current = self.add_page_sized(current.width, current.height)
