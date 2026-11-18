@@ -51,6 +51,8 @@ moon add BenPaoBaMingWangXing/ofdkit
 
 要求 MoonBit 工具链 `moon >= 0.1.20261023`。
 
+装法在独立项目里验证过：新建模块 → `moon add BenPaoBaMingWangXing/ofdkit` → `moon update` → `moon build`，用 `Document` / `Page` 生成一份 1.9 KB 的 `.ofd`，`zipfile.testzip()` 通过。README 下面那段快速开始的代码也原样编译运行过，不是伪代码。
+
 ## 快速开始
 
 ```mbt nocheck
@@ -309,6 +311,8 @@ let next_y = page.paragraph(
 ```
 moon test
 ```
+
+`moon check` 零警告。仓库自带一个 `pre-commit` 钩子（只跑 `moon check`），启用方式是 `git config core.hooksPath .githooks`。
 
 97 个测试，覆盖 CRC-32 标准向量、ZIP 结构、DEFLATE 往返、XML 转义、序列化输出、包校验、TrueType 表目录解析、子集化错误路径、文本度量与换行、表格几何、对齐与两端对齐、字间距、图片格式嗅探、大纲目标解析、跨页分页，以及负例：截断归档、缺页面流、字体文件不是字体、图片魔数不对、大纲指向不存在的页、**子集里查不到画出来的字**、空文档打包、CFF 字体被拒。
 

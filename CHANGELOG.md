@@ -3,6 +3,17 @@
 All notable changes to ofdkit are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.9.1
+
+- **`ofdkit verify` now exits non-zero when a check fails.** It used to print
+  "结构校验未通过" and still return 0, so every script and CI job kept going
+  after a failed verification. Packaging failures exit non-zero too.
+- CI asserts the glyph-coverage check *fails* on a Latin-only font (DejaVu has no
+  CJK glyphs), which is the only way to prove the check is live rather than a
+  check that can never fail.
+- README: the quick-start block is verified to compile and run as written, and
+  `moon add` is verified from a clean module.
+
 ## 0.9.0
 
 Hardening pass: the library stops panicking, its public surface shrinks by

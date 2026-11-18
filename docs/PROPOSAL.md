@@ -93,12 +93,13 @@ xxx.ofd
 1. `moon test` 全部通过（当前 97 个），`moon check` 零警告
 2. `moon build --target wasm` 与 `--target js` 均成功
 3. `moon run cmd/main -- demo` 能生成 `.ofd` 文件
-4. `moon run cmd/main -- verify` 报告 17/17 通过
+4. `moon run cmd/main -- verify` 报告 17/17 通过，**失败时进程退出码为非零**（否则脚本与 CI 会在校验失败后继续跑）
 5. `python3 scripts/verify_ofd.py` 退出码为 0，并报告页数、字体、图片、大纲
 6. `python3 -c "import zipfile; zipfile.ZipFile('out/demo.ofd').testzip()"` 返回 `None`
 7. ofdrw 读取生成的包，页面数、对象数与中文内容与生成时一致
 8. GitHub Actions 全绿（含字体路径与图片路径两条额外分支）
-9. `mooncakes.io` 上可 `moon add BenPaoBaMingWangXing/ofdkit`，装包后能构建并生成合法文档
+9. `mooncakes.io` 上可 `moon add BenPaoBaMingWangXing/ofdkit`；已在独立空项目里实测：`moon update` → `moon build` → 生成 1.9 KB `.ofd` → `zipfile.testzip()` 无错
+10. README「快速开始」的示例代码可原样编译运行
 
 ## 与参考实现的一致性验证
 

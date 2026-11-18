@@ -163,7 +163,7 @@ fn cmd_demo(path : String, font_path : String?, image_path : String?) -> Unit {
     Ok(archive) => archive
     Err(message) => {
       println("打包失败: \{message}")
-      return
+      abort("packaging failed")
     }
   }
   try {
@@ -194,7 +194,10 @@ fn cmd_verify(path : String) -> Unit {
   println("")
   println(report.summary())
   if !report.passed() {
-    println("结构校验未通过")
+    // Exit non-zero, otherwise every script and CI job that calls `verify`
+    // would keep going after a failure.
+    let failed = report.failures().length()
+    abort("verification failed: \{failed} check(s)")
   }
 }
 
