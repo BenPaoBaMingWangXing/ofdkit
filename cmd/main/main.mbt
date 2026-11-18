@@ -159,7 +159,13 @@ fn cmd_demo(path : String, font_path : String?, image_path : String?) -> Unit {
       }
   }
   build_demo(doc, image_id_opt)
-  let bytes = doc.to_bytes()
+  let bytes = match doc.to_bytes() {
+    Ok(archive) => archive
+    Err(message) => {
+      println("打包失败: \{message}")
+      return
+    }
+  }
   try {
     @fs.write_bytes_to_file(path, bytes)
     println(

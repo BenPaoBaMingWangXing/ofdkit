@@ -128,6 +128,85 @@ fn find_all_attr(xml : String, attr : String) -> Array[String] {
 }
 
 ///|
+/// Text content of every `<tag ...>...</tag>` element, in document order.
+/// `find_all_tag_inner` only matches opening tags without attributes; element
+/// text such as `ofd:TextCode` always carries `X`/`Y`, so it needs this one.
+fn find_all_element_text(xml : String, tag : String) -> Array[String] {
+  let values : Array[String] = []
+  let open = "<" + tag
+  let close = "</" + tag + ">"
+  let mut rest = xml
+  let mut keep_going = true
+  while keep_going {
+    match rest.find(open) {
+      None => keep_going = false
+      Some(pos) => {
+        let after = rest[pos + open.length():]
+        match after.find(">") {
+          None => keep_going = false
+          Some(gt) => {
+            let body = after[gt + 1:]
+            match body.find(close) {
+              None => keep_going = false
+              Some(end) => {
+                values.push(body[:end].to_owned())
+                rest = body[end + close.length():].to_owned()
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  values
+}
+
+///|
+/// Undo the five predefined XML entities, which is everything `xml_escape`
+/// ever produces.
+fn xml_unescape(text : String) -> String {
+  if !text.contains("&") {
+    return text
+  }
+  let out = StringBuilder()
+  let mut rest = text
+  let mut keep_going = true
+  while keep_going {
+    match rest.find("&") {
+      None => {
+        out.write_stringview(rest)
+        keep_going = false
+      }
+      Some(pos) => {
+        out.write_stringview(rest[:pos])
+        let tail = rest[pos:]
+        if tail.has_prefix("&amp;") {
+          out.write_char('&')
+          rest = tail[5:].to_owned()
+        } else if tail.has_prefix("&lt;") {
+          out.write_char('<')
+          rest = tail[4:].to_owned()
+        } else if tail.has_prefix("&gt;") {
+          out.write_char('>')
+          rest = tail[4:].to_owned()
+        } else if tail.has_prefix("&quot;") {
+          out.write_char('"')
+          rest = tail[6:].to_owned()
+        } else if tail.has_prefix("&apos;") {
+          out.write_char('\'')
+          rest = tail[6:].to_owned()
+        } else {
+          out.write_char('&')
+          rest = tail[1:].to_owned()
+        }
+      }
+    }
+  }
+  out.to_string()
+}
+
+///|
+///|
 /// Verify an OFD package held in memory.
 pub fn verify_ofd(data : Bytes) -> VerifyReport {
   let report = { checks: [], }
@@ -278,6 +357,9 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
               } else {
                 ""
               }
+              // Keep the parsed faces: the character-coverage check below needs
+              // their cmaps.
+              let faces : Array[TtfFace] = []
               for file in font_files {
                 let candidate = join_path(parent_dir(res_path), "Res/\{file}")
                 match archive.read(candidate) {
@@ -291,12 +373,89 @@ pub fn verify_ofd(data : Bytes) -> VerifyReport {
                         fonts_ok = false
                         font_detail = "\{file}: \{message}"
                       }
-                      Ok(face) =>
+                      Ok(face) => {
                         font_detail = "\{file}: \{face.num_glyphs()} glyphs"
+                        faces.push(face)
+                      }
                     }
                 }
               }
               report.add("embedded fonts are readable", fonts_ok, font_detail)
+
+              // Every character the content streams draw has to exist in the
+              // embedded subset. A missing glyph renders as a blank box, and no
+              // structural check can see that, so check it here.
+              if font_files.length() == 0 {
+                report.add(
+                  "every drawn character is embedded",
+                  true,
+                  "no embedded font; the reader falls back to a system font",
+                )
+              } else if !fonts_ok {
+                report.add(
+                  "every drawn character is embedded",
+                  false,
+                  "font files could not be parsed",
+                )
+              } else {
+                let doc_dir = parent_dir(doc_root)
+                let mut total = 0
+                let missing : Array[Char] = []
+                for base_loc in base_locs {
+                  let path = join_path(doc_dir, base_loc)
+                  match archive.read(path) {
+                    Err(_) => ()
+                    Ok(bytes) => {
+                      let content = @utf8.decode_lossy(bytes)
+                      for raw in find_all_element_text(content, "ofd:TextCode") {
+                        for ch in xml_unescape(raw) {
+                          if ch == '\n' || ch == '\r' {
+                            continue
+                          }
+                          total = total + 1
+                          let mut covered = false
+                          for face in faces {
+                            if face.glyph_for_char(
+                              ch.to_uint().reinterpret_as_int(),
+                            ) !=
+                              0 {
+                              covered = true
+                            }
+                          }
+                          if !covered && !missing.contains(ch) {
+                            missing.push(ch)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                if total == 0 {
+                  report.add(
+                    "every drawn character is embedded", true, "no text drawn",
+                  )
+                } else if missing.length() == 0 {
+                  report.add(
+                    "every drawn character is embedded",
+                    true,
+                    "\{total} character(s) covered",
+                  )
+                } else {
+                  let sample = StringBuilder()
+                  let limit = if missing.length() < 8 { missing.length() } else { 8 }
+                  for i in 0..<limit {
+                    if i > 0 {
+                      sample.write_char(' ')
+                    }
+                    sample.write_char(missing[i])
+                  }
+                  report.add(
+                    "every drawn character is embedded",
+                    false,
+                    "\{missing.length()} of \{total} character(s) missing from the subset: \{sample.to_string()}",
+                  )
+                }
+              }
             }
           }
         }

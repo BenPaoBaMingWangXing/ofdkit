@@ -45,7 +45,7 @@ test "a document with an outline verifies" {
   let doc = @ofdkit.Document::new()
   let page = doc.add_page()
   doc.add_outline("第一章", page, 1)
-  let report = @ofdkit.verify_ofd(doc.to_bytes())
+  let report = @ofdkit.verify_ofd(pack(doc))
   assert_true(report.passed())
   let mut found = false
   for check in report.checks {

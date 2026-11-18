@@ -112,6 +112,6 @@ test "a document with an image verifies" {
   }
   let page = doc.add_page()
   page.image(10.0, 10.0, 40.0, 20.0, id)
-  let report = @ofdkit.verify_ofd(doc.to_bytes())
+  let report = @ofdkit.verify_ofd(pack(doc))
   assert_true(report.passed())
 }

@@ -73,9 +73,13 @@ pub fn Document::directory_names(doc : Document) -> Array[String] {
 
 ///|
 /// Build the complete OFD package.
-pub fn Document::to_bytes(doc : Document) -> Bytes {
+///
+/// Returns `Err` instead of panicking when the document cannot be packaged — an
+/// empty document is a caller mistake, not a broken invariant, and a library
+/// that aborts takes the whole process down with it.
+pub fn Document::to_bytes(doc : Document) -> Result[Bytes, String] {
   if doc.pages.length() == 0 {
-    abort("ofdkit: a document needs at least one page before packaging")
+    return Err("a document needs at least one page before it can be packaged")
   }
   let zw = ZipWriter::new()
   zw.add_file("OFD.xml", @utf8.encode(serialize_ofd_xml(doc)))
@@ -112,5 +116,5 @@ pub fn Document::to_bytes(doc : Document) -> Bytes {
     }
     zw.add_file(image_file_path(image.id, image.format), image.data)
   }
-  zw.finish()
+  Ok(zw.finish())
 }

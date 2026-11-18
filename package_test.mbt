@@ -1,4 +1,14 @@
 ///|
+/// Package a document in a test, failing loudly when it refuses to build.
+/// Shared by every blackbox test file in this package.
+fn pack(doc : @ofdkit.Document) -> Bytes {
+  match doc.to_bytes() {
+    Ok(bytes) => bytes
+    Err(message) => abort("packaging failed: \{message}")
+  }
+}
+
+///|
 /// Structural tests for the OFD serialisers. They assert on the documents the
 /// emitters produce, which is the layer a reader actually parses.
 
@@ -83,7 +93,7 @@ test "package entries are what the standard expects" {
 test "packaged document is a zip archive with an ofd entry first" {
   let doc = @ofdkit.Document::new()
   ignore(doc.add_page())
-  let bytes = doc.to_bytes()
+  let bytes = pack(doc)
   // Local file header signature, little endian.
   assert_eq(bytes[0], b'\x50')
   assert_eq(bytes[1], b'\x4b')
@@ -95,4 +105,14 @@ test "packaged document is a zip archive with an ofd entry first" {
 test "text width estimate is full width for cjk and half for ascii" {
   assert_eq(@ofdkit.estimate_text_width("中文", 10.0), 20.0)
   assert_eq(@ofdkit.estimate_text_width("ab", 10.0), 10.0)
+}
+
+///|
+test "packaging a document with no pages returns an error" {
+  let doc = @ofdkit.Document::new()
+  // A caller mistake must not take the process down: `to_bytes` reports it.
+  match doc.to_bytes() {
+    Ok(_) => fail("a document with no pages must not be packaged")
+    Err(message) => assert_true(message.contains("at least one page"))
+  }
 }

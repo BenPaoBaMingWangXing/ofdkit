@@ -156,7 +156,7 @@ pub fn Document::set_keywords(Self, String) -> Self
 pub fn Document::set_subject(Self, String) -> Self
 pub fn Document::set_title(Self, String) -> Self
 pub fn Document::table_across_pages(Self, Page, TableStyle, Array[Array[String]]) -> (Page, Double)
-pub fn Document::to_bytes(Self) -> Bytes
+pub fn Document::to_bytes(Self) -> Result[Bytes, String]
 
 pub enum DrawObject {
   Text(TextObject)
